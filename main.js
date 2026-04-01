@@ -1658,3 +1658,55 @@ function setupDummyData() {
 }
 
 init();
+
+/* Onboarding Tutorial Logic */
+function initOnboarding() {
+    const onboarded = localStorage.getItem('nexus_onboarded');
+    if (onboarded) return;
+
+    const wrap = document.getElementById('onboarding-wrap');
+    const btnNext = document.getElementById('btn-next-step');
+    const steps = document.querySelectorAll('#onboarding-steps .step');
+    const dots = document.querySelectorAll('.step-dots .dot');
+    let currentStep = 0;
+
+    // Mobile-specific text adjustments
+    if (isMobileMode()) {
+        const p2 = document.getElementById('onboarding-p2');
+        const p3 = document.getElementById('onboarding-p3');
+        const p4 = document.getElementById('onboarding-p4');
+
+        if (p2) p2.innerHTML = "**Pinch** to zoom in/out and **swipe** horizontally to move through the timeline or change days.";
+        if (p3) p3.innerHTML = "Tap the **Floating Action Button (+)** to quickly add a new Project, Meeting, or Task to your schedule.";
+        if (p4) p4.innerHTML = "Tap any event to view and edit its **Documentation**. Manage your goals and notes in a native-feeling mobile pane.";
+    }
+
+    if (wrap) wrap.classList.remove('hidden');
+
+    if (btnNext) {
+        btnNext.addEventListener('click', () => {
+            steps[currentStep].classList.remove('active');
+            dots[currentStep].classList.remove('active');
+            
+            currentStep++;
+            
+            if (currentStep < steps.length) {
+                steps[currentStep].classList.add('active');
+                dots[currentStep].classList.add('active');
+                if (currentStep === steps.length - 1) {
+                    btnNext.textContent = "Get Started";
+                }
+            } else {
+                if (wrap) {
+                    wrap.style.opacity = '0';
+                    setTimeout(() => {
+                        wrap.classList.add('hidden');
+                    }, 400);
+                }
+                localStorage.setItem('nexus_onboarded', 'true');
+            }
+        });
+    }
+}
+
+initOnboarding();

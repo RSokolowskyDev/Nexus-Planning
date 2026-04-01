@@ -1270,3 +1270,107 @@ body.zoom-day .cell-hour-label {
 .mdo-menu-btn.color-blue   { background: #3b82f6; }
 .mdo-menu-btn.color-orange { background: #f97316; }
 .mdo-menu-btn.color-pink   { background: #ec4899; }
+
+/* Onboarding Tutorial Overlay */
+#onboarding-wrap {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(15, 17, 26, 0.85); /* Slightly darker mask */
+    backdrop-filter: blur(8px);
+    z-index: 10000;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    transition: opacity 0.4s ease;
+}
+
+#onboarding-wrap.hidden {
+    display: none;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.onboarding-card {
+    background: var(--bg-grid);
+    border: 1px solid var(--glass-border);
+    border-radius: 24px;
+    padding: 32px;
+    width: 420px;
+    box-shadow: 0 32px 128px rgba(0, 0, 0, 0.8);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+}
+
+.onboarding-card h2 {
+    font-size: 24px;
+    margin-bottom: 12px;
+    font-weight: 700;
+}
+
+.onboarding-card p {
+    font-size: 15px;
+    color: var(--text-muted);
+    line-height: 1.6;
+    margin-bottom: 32px;
+}
+
+.step-icon {
+    font-size: 48px;
+    margin-bottom: 24px;
+    filter: drop-shadow(0 0 16px var(--accent-primary));
+}
+
+#onboarding-steps .step {
+    display: none;
+}
+
+#onboarding-steps .step.active {
+    display: block;
+    animation: stepIn 0.4s cubic-bezier(0.1, 0.9, 0.2, 1);
+}
+
+@keyframes stepIn {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.onboarding-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    margin-top: auto;
+}
+
+.step-dots {
+    display: flex;
+    gap: 8px;
+}
+
+.step-dots .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.15);
+    transition: all 0.2s;
+}
+
+.step-dots .dot.active {
+    background: var(--accent-primary);
+    width: 24px;
+    border-radius: 4px;
+}
+
+#btn-next-step {
+    padding: 10px 24px;
+    font-weight: 700;
+    font-size: 14px;
+    letter-spacing: 0.5px;
+}

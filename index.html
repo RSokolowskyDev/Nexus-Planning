@@ -274,6 +274,47 @@
         </div>
     </div>
 
+    <!-- Onboarding Tutorial -->
+    <div id="onboarding-wrap" class="hidden">
+        <div class="onboarding-card">
+            <div id="onboarding-steps">
+                <!-- Step 1: Welcome -->
+                <div class="step active" data-step="1">
+                    <div class="step-icon">🌌</div>
+                    <h2>Welcome to NexusPlan</h2>
+                    <p>Experience an infinite planning canvas. Pan and zoom through time with an architectural blueprint aesthetic.</p>
+                </div>
+                <!-- Step 2: Pan & Zoom -->
+                <div class="step" data-step="2">
+                    <div class="step-icon">🔍</div>
+                    <h2>Pan & Zoom</h2>
+                    <p id="onboarding-p2">Use your <strong>mouse wheel</strong> to zoom in for Day view or out for Month view. <strong>Click and drag</strong> to pan across the timeline.</p>
+                </div>
+                <!-- Step 3: Create Events -->
+                <div class="step" data-step="3">
+                    <div class="step-icon">➕</div>
+                    <h2>Create Events</h2>
+                    <p id="onboarding-p3">Select the <strong>Add Tool</strong> in the toolbar, choose a type (Project, Meeting, etc.), and <strong>click or drag</strong> on the calendar to schedule.</p>
+                </div>
+                <!-- Step 4: Documentation -->
+                <div class="step" data-step="4">
+                    <div class="step-icon">📝</div>
+                    <h2>Deep Documentation</h2>
+                    <p id="onboarding-p4">Click any event to open the <strong>Split-Screen Documentation</strong> pane. Take notes, set goals, and manage metadata side-by-side.</p>
+                </div>
+            </div>
+            <div class="onboarding-footer">
+                <div class="step-dots">
+                    <span class="dot active"></span>
+                    <span class="dot"></span>
+                    <span class="dot"></span>
+                    <span class="dot"></span>
+                </div>
+                <button id="btn-next-step" class="btn-primary">Next</button>
+            </div>
+        </div>
+    </div>
+
     <script src="main.js" type="module"></script>
 </body>
 
