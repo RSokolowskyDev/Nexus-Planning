@@ -414,7 +414,10 @@ function renderMobileDayOverlay() {
 
     overlay.addEventListener('touchend', (e) => {
         if (e.touches.length > 0) return; // Keep going if fingers still down
-        
+
+        // Don't swipe days if we were dragging or resizing an event
+        if (mdoDraggingContext || mdoResizingContext || lastMdoInteractionMoved) return;
+
         const dx = e.changedTouches[0].clientX - startX;
         const dy = e.changedTouches[0].clientY - startY;
 
@@ -422,7 +425,6 @@ function renderMobileDayOverlay() {
         if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) {
             enterMobileDayView(state.activeDayOffset + (dx > 0 ? -1 : 1));
         }
-        // Vertical Swipe Up: (Removed as requested)
     }, { passive: true });
 
     overlay.addEventListener('touchmove', (e) => {
@@ -1074,6 +1076,11 @@ function handleMove(e) {
         const snapHours = settings.snapMinutes / 60;
         let needsRender = false;
 
+        // Ensure a dailyTimes entry exists for this day (recurring events may not have one)
+        if (!item.dailyTimes[dayOff]) {
+            item.dailyTimes[dayOff] = { startHour: initialStartHour, durationH: initialDurationH };
+        }
+
         if (edge === 'bottom') {
             let newDur = Math.round((initialDurationH + hourDelta) / snapHours) * snapHours;
             if (newDur < snapHours) newDur = snapHours;
@@ -1150,6 +1157,7 @@ function finalizeDrags() {
     if (mdoDraggingContext || mdoResizingContext) {
         mdoDraggingContext = null;
         mdoResizingContext = null;
+        lastMdoInteractionMoved = false;
         saveData();
     }
     if (movingBlockContext) movingBlockContext = null;
