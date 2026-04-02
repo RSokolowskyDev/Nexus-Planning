@@ -136,6 +136,31 @@ html {
     gap: 12px;
 }
 
+@media (max-width: 768px) {
+    .top-nav {
+        padding: 8px 12px;
+    }
+    
+    .logo span {
+        display: none; /* Hide 'Plan' to save space */
+    }
+
+    .toolbar {
+        margin-left: 10px;
+        gap: 4px;
+    }
+
+    .zoom-controls,
+    .desktop-only {
+        display: none !important;
+    }
+
+    #user-controls {
+        margin-left: 10px !important;
+        padding-left: 10px !important;
+    }
+}
+
 .zoom-controls button {
     background: rgba(255, 255, 255, 0.05);
     border: 1px solid var(--glass-border);
