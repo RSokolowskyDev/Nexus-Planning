@@ -2,8 +2,8 @@ import os
 import re
 import sys
 import time
+import subprocess
 import warnings
-from pathlib import Path
 from google import genai
 
 warnings.filterwarnings("ignore")
@@ -12,7 +12,6 @@ warnings.filterwarnings("ignore")
 MODEL_ID = "gemini-3-flash-preview"
 MAX_RETRIES = 3
 RETRY_CAP = 120
-CODEBASE_TXT = "codebase_snapshot.txt"
 
 API_KEY = os.environ.get("GEMINI_API_KEY", "")
 if not API_KEY:
@@ -26,79 +25,80 @@ IGNORE = {'.git', 'node_modules', '__pycache__', 'dist', 'AI_FEEDBACK.md',
           'sentinel.py', '.env', '.sentinel_lock', '.sentinel_iterations',
           'codebase_snapshot.txt'}
 
-def build_codebase_txt():
-    """Write entire codebase to a single .txt file for upload."""
-    lines = ["NEXUS PLANNING — FULL CODEBASE SNAPSHOT\n", "=" * 60 + "\n\n"]
-    for root, dirs, files in os.walk("."):
-        dirs[:] = [d for d in dirs if d not in IGNORE]
-        for file in sorted(files):
-            file_path = os.path.join(root, file)
-            if any(ign in file_path for ign in IGNORE):
-                continue
-            if file.endswith(('.py', '.js', '.md', '.html', '.css', '.json')):
-                try:
-                    with open(file_path, 'r', encoding='utf-8') as f:
-                        content = f.read()
-                    lines.append(f"\n\n{'=' * 60}\n")
-                    lines.append(f"FILE: {file_path}\n")
-                    lines.append(f"{'=' * 60}\n")
-                    lines.append(content)
-                except:
-                    continue
-    with open(CODEBASE_TXT, 'w', encoding='utf-8') as f:
-        f.writelines(lines)
-    size_kb = Path(CODEBASE_TXT).stat().st_size // 1024
-    print(f"--- SENTINEL: Codebase snapshot built ({size_kb} KB) ---")
+def get_changed_files():
+    """Return files changed in the last commit."""
+    try:
+        result = subprocess.run(
+            ['git', 'diff-tree', '--no-commit-id', '-r', '--name-only', 'HEAD'],
+            capture_output=True, text=True
+        )
+        return [f.strip() for f in result.stdout.strip().splitlines() if f.strip()]
+    except Exception:
+        return []
+
+def read_file_safe(path):
+    try:
+        with open(path, 'r', encoding='utf-8') as f:
+            return f.read()
+    except Exception:
+        return None
 
 def run_analysis():
     print(f"--- SENTINEL: Initializing Architect ({MODEL_ID})... ---")
 
-    # 1. Read PLAN.md
-    try:
-        with open("PLAN.md", "r", encoding="utf-8") as f:
-            plan_contents = f.read().strip()
-    except FileNotFoundError:
-        plan_contents = "(PLAN.md not found — review code quality generally)"
+    # 1. PLAN.md — always included, defines the goal
+    plan_contents = read_file_safe("PLAN.md") or "(PLAN.md not found)"
 
-    # 2. Build and upload the codebase as a .txt file
-    build_codebase_txt()
-    print("--- SENTINEL: Uploading codebase snapshot to Gemini Files API... ---")
-    uploaded_file = client.files.upload(file=CODEBASE_TXT)
-    print(f"--- SENTINEL: Upload complete ({uploaded_file.name}) ---")
+    # 2. Only the files that changed in the last commit
+    changed_files = [
+        f for f in get_changed_files()
+        if not any(ign in f for ign in IGNORE)
+        and f.endswith(('.js', '.py', '.html', '.css', '.json', '.md'))
+    ]
 
-    # 3. Prompt — small, references the uploaded file
+    if not changed_files:
+        print("--- SENTINEL: No relevant changed files detected. Skipping review. ---")
+        sys.exit(0)
+
+    print(f"--- SENTINEL: Reviewing {len(changed_files)} changed file(s): {changed_files} ---")
+
+    # 3. Build a compact payload — PLAN.md + only changed file contents
+    payload = f"PLAN.md:\n{plan_contents}\n\n{'='*60}\nCHANGED FILES:\n"
+    total_chars = len(payload)
+
+    for file_path in changed_files:
+        content = read_file_safe(file_path)
+        if content is None:
+            continue
+        chunk = f"\n--- FILE: {file_path} ---\n{content}\n"
+        payload += chunk
+        total_chars += len(chunk)
+
+    tokens_est = total_chars // 4
+    print(f"--- SENTINEL: Payload ~{tokens_est:,} tokens ({total_chars:,} chars) ---")
+
+    # 4. Prompt — kept minimal since payload is already focused
     prompt = (
-        "ACT AS: Senior Lead Software Architect. You are the planning brain of a two-AI pipeline.\n"
-        "Your partner is Claude Code, who implements whatever instructions you provide.\n\n"
-        "The attached file contains the full codebase. Review it against the current PLAN.md goals below.\n\n"
-        "YOUR TASK:\n"
-        "1. Check whether the PLAN.md goals are correctly implemented in the code.\n"
-        "2. Look for bugs, incomplete logic, or edge cases.\n"
-        "3. If all goals are met: output [PASS].\n"
-        "4. If changes are needed: output [ACTION] with specific file names, function names,\n"
-        "   and line-by-line instructions that Claude Code can execute directly.\n"
-        "5. If there is a critical error or security issue: output [MANUAL].\n\n"
-        f"CURRENT PLAN.md:\n{plan_contents}\n\n"
-        "Start your response with exactly one tag on its own line:\n"
-        "[PASS] / [ACTION] / [MANUAL]\n"
+        "ACT AS: Senior Lead Software Architect reviewing a code commit.\n"
+        "Your partner Claude Code will implement any changes you specify.\n\n"
+        "Review the CHANGED FILES below against the PLAN.md goals.\n"
+        "Check for bugs, missing logic, or anything that doesn't satisfy the plan.\n\n"
+        + payload +
+        "\n\nRespond with exactly one of these on the first line, then your reasoning:\n"
+        "[PASS]   — plan goals fully met, code is correct\n"
+        "[ACTION] — changes needed; list exact file, function, and what to change\n"
+        "[MANUAL] — critical error or security issue needing human review\n"
     )
 
-    # 4. Call Gemini with retry on rate limits
+    # 5. Call Gemini with retry on rate limits
     for attempt in range(1, MAX_RETRIES + 1):
         try:
             response = client.models.generate_content(
                 model=MODEL_ID,
-                contents=[prompt, uploaded_file]
+                contents=prompt
             )
             feedback = response.text
             feedback_upper = feedback.upper()
-
-            # Clean up uploaded file
-            try:
-                client.files.delete(name=uploaded_file.name)
-            except:
-                pass
-            os.remove(CODEBASE_TXT)
 
             if "[MANUAL]" in feedback_upper:
                 with open("AI_FEEDBACK.md", "w", encoding='utf-8') as f:
@@ -121,7 +121,7 @@ def run_analysis():
             # No recognized tag
             with open("AI_FEEDBACK.md", "w", encoding='utf-8') as f:
                 f.write(f"# Ambiguous Response\n\n{feedback}")
-            print("--- SENTINEL: Ambiguous response. Commit blocked. ---")
+            print("--- SENTINEL: Ambiguous response. Check AI_FEEDBACK.md. ---")
             sys.exit(1)
 
         except Exception as e:
@@ -137,13 +137,6 @@ def run_analysis():
 
             print(f"\n--- SENTINEL ERROR: {err} ---")
             print("--- SENTINEL: API unavailable. Skipping review this commit. ---")
-            # Clean up on error too
-            try:
-                client.files.delete(name=uploaded_file.name)
-            except:
-                pass
-            if os.path.exists(CODEBASE_TXT):
-                os.remove(CODEBASE_TXT)
             sys.exit(1)
 
 if __name__ == "__main__":
