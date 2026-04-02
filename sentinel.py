@@ -51,18 +51,31 @@ def run_analysis():
                 except:
                     continue
 
-    # 2. ARCHITECT PROMPT
+    # 2. ARCHITECT PROMPT — driven entirely by PLAN.md contents
+    plan_contents = ""
+    try:
+        with open("PLAN.md", "r", encoding="utf-8") as f:
+            plan_contents = f.read().strip()
+    except FileNotFoundError:
+        plan_contents = "(PLAN.md not found — review code quality and consistency generally)"
+
     prompt = (
-        "ACT AS: Senior Lead UX Architect. COMPARE: Codebase vs PLAN.md.\n\n"
-        "GOAL: Ensure 'Mobile Day View' (overlay) PERSISTS after adding an event.\n"
-        "1. Check main.js for event creation logic in the FAB speed-dial handler.\n"
-        "2. Locate any code that closes the overlay or reloads the page post-creation.\n"
-        "3. Verify that after item creation, renderMobileDayOverlay() is called (not closeMobileDayView).\n"
-        "4. Verify saveData() is called to persist the new item.\n\n"
-        "OUTPUT FORMAT — use EXACTLY one of these tags on its own line:\n"
-        "- [PASS]: Goals met, overlay persists, saveData() called.\n"
-        "- [ACTION]: Changes needed. Provide line-by-line instructions for Claude Code.\n"
-        "- [MANUAL]: Critical logic error or risk of infinite loop detected.\n"
+        "ACT AS: Senior Lead Software Architect. You are the planning brain of a two-AI pipeline.\n"
+        "Your partner is Claude Code, who implements whatever instructions you provide.\n\n"
+        "YOUR TASK:\n"
+        "1. Read PLAN.md (included below in the codebase) to understand the current goals.\n"
+        "2. Review the full codebase to assess whether those goals have been correctly implemented.\n"
+        "3. Check for bugs, incomplete logic, edge cases, or anything that conflicts with the plan.\n"
+        "4. If goals are fully met and code is clean: output [PASS].\n"
+        "5. If fixes or improvements are needed: output [ACTION] followed by clear, specific,\n"
+        "   line-by-line instructions that Claude Code can execute directly — include exact file\n"
+        "   names, function names, and what to change.\n"
+        "6. If you detect a critical logic error, infinite loop risk, or security issue: output [MANUAL].\n\n"
+        f"CURRENT PLAN.md CONTENTS:\n{plan_contents}\n\n"
+        "OUTPUT FORMAT — your response MUST start with exactly one of these tags on its own line:\n"
+        "[PASS]   — all plan goals met, code is correct\n"
+        "[ACTION] — changes needed (follow with detailed instructions for Claude Code)\n"
+        "[MANUAL] — critical issue requiring human review\n"
     )
 
     message_parts.insert(0, prompt)
