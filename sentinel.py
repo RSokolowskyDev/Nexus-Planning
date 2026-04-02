@@ -8,7 +8,7 @@ import google.generativeai as genai
 genai.configure(api_key="AIzaSyBJFXJoe8OdSsiSD-odRvAQksZikzTukfQ")
 
 # Using the 1.5 Flash model - it's fast and reliable for this
-model = genai.GenerativeModel('gemini-2.5-pro')
+model = genai.GenerativeModel('gemini-2.5-flash')
 
 IGNORE = {'.git', 'node_modules', '__pycache__', 'dist', 'AI_FEEDBACK.md', 'sentinel.py', '.env'}
 
