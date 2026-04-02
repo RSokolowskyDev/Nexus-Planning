@@ -1170,6 +1170,7 @@ function selectItem(id) {
     document.querySelectorAll('.canvas-item').forEach(el => el.classList.toggle('selected', state.selectedItemIds.includes(el.dataset.id)));
 
     if (state.selectedItemIds.length > 0) {
+        tryCompleteHabitFromCalendarItem(id);
         toggleDocsPane(true);
         syncDocWindows();
     } else {
@@ -1294,6 +1295,7 @@ function renderItems() {
 
                     const el = document.createElement('div');
                     el.className = `canvas-item daily-block color-${item.color}`;
+                    if (item.habitId) el.classList.add('habit-item');
                     if (state.selectedItemIds.includes(item.id)) el.classList.add('selected');
                     el.dataset.id = item.id; el.dataset.dayoff = dayOff;
 
@@ -1305,7 +1307,15 @@ function renderItems() {
 
                         const sTime = formatTime(tBlock.startHour);
                         const eTime = formatTime(tBlock.startHour + tBlock.durationH);
-                        el.innerHTML = `<div class="item-title">${item.title}${item.repeat !== 'none' ? ' 🔄' : ''}</div><div style="font-size:11px; margin-top:4px; opacity:0.8">${sTime} - ${eTime}</div>`;
+                        let habitBadge = '';
+                        if (item.habitId) {
+                            const habit = identityService.getHabits().find(h => h.id === item.habitId);
+                            const todayStr = new Date().toISOString().split('T')[0];
+                            const done = habit && identityService.isCompletedOnDate(item.habitId, todayStr);
+                            const streak = habit ? (habit.streak || 0) : 0;
+                            habitBadge = `<span style="float:right;font-size:10px;opacity:0.8">${done ? '✓' : ''}${streak > 0 ? ` ${streak}🔥` : ''}</span>`;
+                        }
+                        el.innerHTML = `<div class="item-title">${item.title}${item.repeat !== 'none' ? ' 🔄' : ''}${habitBadge}</div><div style="font-size:11px; margin-top:4px; opacity:0.8">${sTime} - ${eTime}</div>`;
 
                         const handleT = document.createElement('div'); handleT.className = 'resize-handle top'; el.appendChild(handleT);
                         const handleB = document.createElement('div'); handleB.className = 'resize-handle bottom'; el.appendChild(handleB);
@@ -1698,6 +1708,250 @@ function setupAuth() {
 function saveData() {
     localStorage.setItem('nexus_items', JSON.stringify(state.items));
     saveToCloud(state.items);
+}
+
+// ─── Identity Blueprint & Habit Tracking ─────────────────────────────────────
+
+let _habitModalTargetIdentityId = null;
+
+function setupIdentityUI() {
+    identityService.loadIdentityData().then(() => renderIdentityPane());
+
+    document.getElementById('btn-toggle-identity').addEventListener('click', () => {
+        const pane = document.getElementById('identity-pane');
+        pane.classList.toggle('collapsed');
+        if (!pane.classList.contains('collapsed')) renderIdentityPane();
+    });
+
+    document.getElementById('add-identity').addEventListener('click', () => {
+        const name = prompt('Identity statement (e.g. "I am a disciplined athlete"):');
+        if (!name || !name.trim()) return;
+        const colors = ['blue', 'purple', 'green', 'pink', 'orange'];
+        const color = colors[identityService.getIdentities().length % colors.length];
+        identityService.addIdentity(name.trim(), color);
+        identityService.saveIdentityData();
+        renderIdentityPane();
+    });
+
+    // Habit modal wiring
+    document.getElementById('cancel-habit').addEventListener('click', () => {
+        document.getElementById('habit-modal').classList.add('hidden');
+    });
+
+    document.getElementById('save-habit').addEventListener('click', () => {
+        const name = document.getElementById('habit-name').value.trim();
+        if (!name) return;
+        const timeVal = document.getElementById('habit-start-time').value;
+        let startHour = null;
+        if (timeVal) {
+            const [h, m] = timeVal.split(':').map(Number);
+            startHour = h + m / 60;
+        }
+        const habit = identityService.addHabit({
+            identityId: _habitModalTargetIdentityId,
+            name,
+            frequency: document.getElementById('habit-frequency').value,
+            cue: document.getElementById('habit-cue').value.trim(),
+            reward: document.getElementById('habit-reward').value.trim(),
+            startHour,
+            durationH: parseFloat(document.getElementById('habit-duration').value) || 0.5
+        });
+
+        // If a time was given, create a recurring calendar event for this habit
+        if (startHour !== null) {
+            const repeatMap = { daily: 'daily', weekdays: 'weekdays', weekly: 'weekly' };
+            const calItem = {
+                id: generateId(), type: 'task', title: habit.name,
+                color: getIdentityColor(_habitModalTargetIdentityId),
+                startDayOffset: 0, durationDays: 1,
+                notes: { day: '', week: '', month: '' },
+                dailyTimes: { 0: { startHour, durationH: habit.durationH } },
+                people: '', goals: '', repeat: repeatMap[habit.frequency] || 'daily',
+                habitId: habit.id
+            };
+            state.items.push(calItem);
+            saveData();
+            renderItems();
+        }
+
+        identityService.saveIdentityData();
+        document.getElementById('habit-modal').classList.add('hidden');
+        renderIdentityPane();
+    });
+}
+
+function getIdentityColor(identityId) {
+    const identity = identityService.getIdentities().find(i => i.id === identityId);
+    return identity ? identity.color : 'blue';
+}
+
+function renderIdentityPane() {
+    const list = document.getElementById('identity-list');
+    const identities = identityService.getIdentities();
+    const habits = identityService.getHabits();
+    list.innerHTML = '';
+
+    let totalVotes = 0;
+    identities.forEach(identity => {
+        totalVotes += identity.votes || 0;
+        const identityHabits = habits.filter(h => h.identityId === identity.id);
+        list.appendChild(buildIdentityCard(identity, identityHabits));
+    });
+
+    if (identities.length === 0) {
+        list.innerHTML = '<p style="color:var(--text-muted);font-size:12px;padding:20px;text-align:center;">Click + to define your first identity.</p>';
+    }
+
+    document.getElementById('total-votes').textContent = totalVotes;
+}
+
+function buildIdentityCard(identity, habits) {
+    const card = document.createElement('div');
+    card.className = 'identity-card';
+
+    const today = new Date().toISOString().split('T')[0];
+    const completedToday = habits.filter(h => identityService.isCompletedOnDate(h.id, today)).length;
+    const allDoneToday = habits.length > 0 && completedToday === habits.length;
+
+    const accentColor = `var(--color-${identity.color})`;
+
+    const headerHTML = `
+        <div class="identity-card-header">
+            <span class="identity-dot" style="background:${accentColor}"></span>
+            <span class="identity-name">${identity.name}</span>
+            <button class="identity-delete-btn" data-id="${identity.id}" title="Delete Identity">×</button>
+        </div>
+        <div class="identity-votes-row">
+            <span class="identity-votes-label">${identity.votes || 0} identity votes</span>
+            ${allDoneToday ? '<span class="identity-done-badge">✓ All done today!</span>' : `<span class="identity-progress">${completedToday}/${habits.length} habits today</span>`}
+        </div>
+        <div class="vote-bar-container">
+            <div class="vote-bar" style="background:${accentColor}; width:${Math.min(100, (identity.votes || 0))}%"></div>
+        </div>
+    `;
+
+    const habitsHTML = habits.map(h => buildHabitRowHTML(h, today)).join('');
+
+    card.innerHTML = `
+        ${headerHTML}
+        <div class="habits-list">${habitsHTML}</div>
+        <button class="add-habit-btn" data-identity="${identity.id}">+ Add Habit</button>
+    `;
+
+    // Habit check buttons
+    card.querySelectorAll('.habit-check-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const habitId = btn.dataset.habit;
+            const wasNew = identityService.completeHabit(habitId, today);
+            if (wasNew) {
+                identity.votes = (identity.votes || 0) + 1;
+                showVoteFlash(btn, accentColor);
+            }
+            identityService.saveIdentityData();
+            renderIdentityPane();
+        });
+    });
+
+    // Habit uncomplete buttons
+    card.querySelectorAll('.habit-uncheck-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const habitId = btn.dataset.habit;
+            identityService.uncompleteHabit(habitId, today);
+            identity.votes = Math.max(0, (identity.votes || 0) - 1);
+            identityService.saveIdentityData();
+            renderIdentityPane();
+        });
+    });
+
+    // Habit delete buttons
+    card.querySelectorAll('.habit-delete-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            identityService.deleteHabit(btn.dataset.habit);
+            identityService.saveIdentityData();
+            renderIdentityPane();
+        });
+    });
+
+    // Add habit button
+    card.querySelector('.add-habit-btn').addEventListener('click', () => {
+        _habitModalTargetIdentityId = identity.id;
+        document.getElementById('habit-name').value = '';
+        document.getElementById('habit-cue').value = '';
+        document.getElementById('habit-reward').value = '';
+        document.getElementById('habit-frequency').value = 'daily';
+        document.getElementById('habit-start-time').value = '';
+        document.getElementById('habit-duration').value = '0.5';
+        document.getElementById('habit-modal').classList.remove('hidden');
+    });
+
+    // Identity delete
+    card.querySelector('.identity-delete-btn').addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (!confirm(`Delete identity "${identity.name}" and all its habits?`)) return;
+        // Remove linked calendar items
+        state.items = state.items.filter(item => {
+            const habit = identityService.getHabits().find(h => h.identityId === identity.id && h.id === item.habitId);
+            return !habit;
+        });
+        identityService.deleteIdentity(identity.id);
+        identityService.saveIdentityData();
+        saveData();
+        renderIdentityPane();
+        renderItems();
+    });
+
+    return card;
+}
+
+function buildHabitRowHTML(habit, today) {
+    const done = identityService.isCompletedOnDate(habit.id, today);
+    const streak = habit.streak || 0;
+    const streakIcon = streak >= 7 ? '🔥' : streak >= 3 ? '⚡' : '';
+    const freqLabel = { daily: 'Daily', weekdays: 'Weekdays', weekly: 'Weekly' }[habit.frequency] || habit.frequency;
+    const cueHint = habit.cue ? `<span class="habit-cue-hint">After: ${habit.cue}</span>` : '';
+
+    return `
+        <div class="habit-row ${done ? 'habit-done' : ''}">
+            <div class="habit-row-main">
+                <button class="habit-check-btn ${done ? 'checked' : ''}" data-habit="${habit.id}" title="${done ? 'Mark incomplete' : 'Mark complete for today'}">
+                    ${done ? '✓' : ''}
+                </button>
+                <div class="habit-info">
+                    <span class="habit-name">${habit.name}</span>
+                    <span class="habit-meta">${freqLabel} ${streakIcon ? `· ${streak}d ${streakIcon}` : streak > 0 ? `· ${streak}d streak` : ''}</span>
+                    ${cueHint}
+                </div>
+                <button class="habit-delete-btn" data-habit="${habit.id}" title="Remove habit">×</button>
+            </div>
+        </div>
+    `;
+}
+
+function showVoteFlash(el, color) {
+    const flash = document.createElement('div');
+    flash.className = 'vote-flash';
+    flash.textContent = '+1 vote';
+    flash.style.color = color;
+    el.parentElement.appendChild(flash);
+    setTimeout(() => flash.remove(), 1200);
+}
+
+// Mark habit complete when its calendar event is clicked in the day view
+function tryCompleteHabitFromCalendarItem(itemId) {
+    const item = state.items.find(i => i.id === itemId);
+    if (!item || !item.habitId) return;
+    const today = new Date().toISOString().split('T')[0];
+    const wasNew = identityService.completeHabit(item.habitId, today);
+    if (wasNew) {
+        const habit = identityService.getHabits().find(h => h.id === item.habitId);
+        const identity = identityService.getIdentities().find(i => i.id === habit?.identityId);
+        if (identity) identity.votes = (identity.votes || 0) + 1;
+        identityService.saveIdentityData();
+        renderIdentityPane();
+    }
 }
 
 init();

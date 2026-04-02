@@ -381,6 +381,13 @@ body.zoom-day .cell-hour-label {
     display: block;
 }
 
+/* On desktop day view: labels inside cell so they're visible as a left gutter */
+@media (min-width: 769px) {
+    body.zoom-day .cell-hour-label {
+        left: 4px;
+    }
+}
+
 /* On mobile day view: labels inside cell, hide headers that waste vertical space */
 @media (max-width: 768px) {
     body.zoom-day .cell-hour-label {
@@ -1555,4 +1562,200 @@ body.zoom-day .cell-hour-label {
     font-style: italic;
     color: var(--color-green);
     font-weight: 500;
+}
+
+/* ── Identity Card (detailed) ─────────────────────────────────── */
+.identity-card-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 4px;
+}
+
+.identity-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.identity-name {
+    font-size: 14px;
+    font-weight: 600;
+    flex: 1;
+    color: var(--text-main);
+}
+
+.identity-delete-btn {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 18px;
+    line-height: 1;
+    padding: 0 2px;
+    opacity: 0;
+    transition: opacity 0.15s;
+}
+.identity-card:hover .identity-delete-btn { opacity: 1; }
+.identity-delete-btn:hover { color: #ff6b6b; }
+
+.identity-votes-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.identity-votes-label {
+    font-size: 11px;
+    color: var(--text-muted);
+}
+
+.identity-progress {
+    font-size: 11px;
+    color: var(--text-muted);
+}
+
+.identity-done-badge {
+    font-size: 11px;
+    color: var(--color-green);
+    font-weight: 600;
+}
+
+/* ── Habit Rows ────────────────────────────────────────────────── */
+.habits-list {
+    margin-top: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.habit-row {
+    border-radius: 8px;
+    transition: background 0.15s;
+}
+
+.habit-row-main {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+}
+
+.habit-check-btn {
+    width: 22px;
+    height: 22px;
+    min-width: 22px;
+    border-radius: 50%;
+    border: 2px solid var(--glass-border);
+    background: transparent;
+    color: var(--color-green);
+    cursor: pointer;
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    margin-top: 2px;
+}
+
+.habit-check-btn:hover {
+    border-color: var(--color-green);
+    background: rgba(16, 185, 129, 0.15);
+}
+
+.habit-check-btn.checked {
+    background: var(--color-green);
+    border-color: var(--color-green);
+    color: white;
+}
+
+.habit-row.habit-done .habit-name {
+    opacity: 0.5;
+    text-decoration: line-through;
+}
+
+.habit-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.habit-name {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-main);
+}
+
+.habit-meta {
+    font-size: 11px;
+    color: var(--text-muted);
+}
+
+.habit-cue-hint {
+    font-size: 10px;
+    color: var(--text-muted);
+    font-style: italic;
+}
+
+.habit-delete-btn {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 16px;
+    line-height: 1;
+    padding: 0 2px;
+    opacity: 0;
+    transition: opacity 0.15s;
+    flex-shrink: 0;
+}
+.habit-row:hover .habit-delete-btn { opacity: 1; }
+.habit-delete-btn:hover { color: #ff6b6b; }
+
+/* ── Add Habit Button ───────────────────────────────────────────── */
+.add-habit-btn {
+    margin-top: 12px;
+    width: 100%;
+    background: rgba(255,255,255,0.04);
+    border: 1px dashed var(--glass-border);
+    color: var(--text-muted);
+    border-radius: 8px;
+    padding: 7px 0;
+    cursor: pointer;
+    font-size: 12px;
+    font-family: var(--font-family);
+    transition: all 0.2s;
+}
+.add-habit-btn:hover {
+    background: rgba(255,255,255,0.08);
+    color: var(--text-main);
+    border-color: rgba(255,255,255,0.25);
+}
+
+/* ── Vote Flash Animation ───────────────────────────────────────── */
+.vote-flash {
+    position: absolute;
+    font-size: 12px;
+    font-weight: 700;
+    pointer-events: none;
+    animation: voteRise 1.2s ease-out forwards;
+    right: 8px;
+    top: 0;
+}
+
+@keyframes voteRise {
+    0%   { opacity: 1; transform: translateY(0); }
+    100% { opacity: 0; transform: translateY(-24px); }
+}
+
+/* ── Habit calendar events: streak badge ───────────────────────── */
+.canvas-item.habit-item::after {
+    content: attr(data-streak);
+    position: absolute;
+    top: 3px;
+    right: 6px;
+    font-size: 10px;
+    opacity: 0.8;
 }
