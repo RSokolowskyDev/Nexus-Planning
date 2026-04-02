@@ -94,7 +94,7 @@ function decimalToTimeInput(hFloat) {
     let h = Math.floor(hFloat);
     let m = Math.round((hFloat - h) * 60);
     if (m >= 60) { h += 1; m -= 60; }
-    let hStr = Math.max(0, Math.min(23, h)).toString().padStart(2, '0');
+    let hStr = Math.max(0, h % 24).toString().padStart(2, '0');
     let mStr = m.toString().padStart(2, '0');
     return `${hStr}:${mStr}`;
 }
@@ -1560,8 +1560,8 @@ if (btnToggleView) btnToggleView.addEventListener('click', toggleView);
 
 let isResizingH = false, isResizingV = false;
 let resizeHStartY = 0, resizeHStartHeight = 0;
-document.getElementById('h-resizer').addEventListener('mousedown', (e) => { isResizingH = true; document.body.style.userSelect = 'none'; });
-document.getElementById('h-resizer').addEventListener('touchstart', (e) => { isResizingH = true; document.body.style.userSelect = 'none'; e.preventDefault(); }, { passive: false });
+document.getElementById('h-resizer').addEventListener('mousedown', (e) => { isResizingH = true; resizeHStartY = getCoords(e).y; resizeHStartHeight = document.getElementById('docs-pane').offsetHeight; document.body.style.userSelect = 'none'; });
+document.getElementById('h-resizer').addEventListener('touchstart', (e) => { isResizingH = true; resizeHStartY = getCoords(e).y; resizeHStartHeight = document.getElementById('docs-pane').offsetHeight; document.body.style.userSelect = 'none'; e.preventDefault(); }, { passive: false });
 document.getElementById('v-resizer').addEventListener('mousedown', (e) => { isResizingV = true; document.body.style.userSelect = 'none'; });
 document.getElementById('v-resizer').addEventListener('touchstart', (e) => { isResizingV = true; document.body.style.userSelect = 'none'; e.preventDefault(); }, { passive: false });
 
@@ -2213,9 +2213,9 @@ function initOnboarding() {
         const p3 = document.getElementById('onboarding-p3');
         const p4 = document.getElementById('onboarding-p4');
 
-        if (p2) p2.innerHTML = "**Pinch** to zoom in/out and **swipe** horizontally to move through the timeline or change days.";
-        if (p3) p3.innerHTML = "Tap the **Floating Action Button (+)** to quickly add a new Project, Meeting, or Task to your schedule.";
-        if (p4) p4.innerHTML = "Tap any event to view and edit its **Documentation**. Manage your goals and notes in a native-feeling mobile pane.";
+        if (p2) p2.innerHTML = "<b>Pinch</b> to zoom in/out and <b>swipe</b> horizontally to move through the timeline or change days.";
+        if (p3) p3.innerHTML = "Tap the <b>Floating Action Button (+)</b> to quickly add a new Project, Meeting, or Task to your schedule.";
+        if (p4) p4.innerHTML = "Tap any event to view and edit its <b>Documentation</b>. Manage your goals and notes in a native-feeling mobile pane.";
     }
 
     if (wrap) wrap.classList.remove('hidden');
