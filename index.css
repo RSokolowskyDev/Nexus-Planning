@@ -1153,7 +1153,7 @@ body.zoom-day .cell-hour-label {
 .mdo-hour-row {
     display: flex;
     align-items: flex-start;
-    border-bottom: 1px solid rgba(255,255,255,0.04);
+    border-bottom: 1px solid rgba(255,255,255,0.1);
     min-height: 60px;
     position: relative;
 }
@@ -1172,7 +1172,7 @@ body.zoom-day .cell-hour-label {
     flex: 1;
     position: relative;
     min-height: 60px;
-    border-left: 1px solid rgba(255,255,255,0.06);
+    border-left: 1px solid rgba(255,255,255,0.15);
 }
 
 .mdo-event {
@@ -1204,6 +1204,54 @@ body.zoom-day .cell-hour-label {
 .mdo-event-time {
     font-size: 12px;
     opacity: 0.8;
+}
+
+.mdo-event .resize-handle {
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 10px;
+    cursor: ns-resize;
+    z-index: 1;
+    background: transparent;
+}
+
+.mdo-event .resize-handle.top {
+    top: 0;
+    border-top-left-radius: 8px;
+    border-top-right-radius: 8px;
+}
+
+.mdo-event .resize-handle.bottom {
+    bottom: 0;
+    border-bottom-left-radius: 8px;
+    border-bottom-right-radius: 8px;
+}
+
+.mdo-event .resize-handle:hover,
+.mdo-event.selected .resize-handle {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.mdo-event .resize-handle.top::after,
+.mdo-event .resize-handle.bottom::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 20px;
+    height: 3px;
+    background: rgba(255, 255, 255, 0.4);
+    border-radius: 2px;
+    pointer-events: none;
+}
+
+.mdo-event .resize-handle.top::after {
+    top: 3px;
+}
+
+.mdo-event .resize-handle.bottom::after {
+    bottom: 3px;
 }
 
 /* Event color variants */

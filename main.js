@@ -307,11 +307,13 @@ function renderMobileDayOverlay() {
                 const sTime = formatTime(tBlock.startHour);
                 const eTime = formatTime(tBlock.startHour + tBlock.durationH);
 
-                eventsHTML.push(`<div class="mdo-event color-${item.color}" 
+                eventsHTML.push(`<div class="mdo-event color-${item.color}"
                     style="top:${topPx}px; height:${heightPx}px; left: 62px; right: 8px;"
-                    data-id="${item.id}">
+                    data-id="${item.id}" data-dayoff="${off}">
+                    <div class="resize-handle top"></div>
                     <div class="mdo-event-title">${item.title}${item.repeat !== 'none' ? ' 🔄' : ''}</div>
                     <div class="mdo-event-time">${sTime} – ${eTime}</div>
+                    <div class="resize-handle bottom"></div>
                 </div>`);
             }
         });
@@ -433,9 +435,7 @@ function renderMobileDayOverlay() {
 
             state.items.push(newItem);
             renderItems();
-
-            // UI sequence: close day view, then select+open docs after transition
-            closeMobileDayView(newItem.id);
+            selectItem(newItem.id);
             
             // Reset FAB
             fab.classList.remove('active');
@@ -649,7 +649,7 @@ function handleStart(e) {
     const coords = getCoords(e);
     const resizeHandle = e.target.closest('.resize-handle');
     if (resizeHandle && (state.activeTool === 'select' || state.activeTool === 'pan')) {
-        const itemEl = resizeHandle.closest('.canvas-item');
+        const itemEl = resizeHandle.closest('.canvas-item, .mdo-event');
         const id = itemEl.dataset.id;
         let edge = 'right';
         if (resizeHandle.classList.contains('left')) edge = 'left';
@@ -1012,7 +1012,14 @@ function finalizeDrags() {
         if (currentViewLevel === 'day') snapToNearestDay();
     }
     if (resizingBlockContext) resizingBlockContext = null;
-    if (resizingDailyContext) resizingDailyContext = null;
+    if (resizingDailyContext) {
+        resizingDailyContext = null;
+        const mdoOverlay = document.getElementById('mobile-day-overlay');
+        if (mdoOverlay && mdoOverlay.style.display !== 'none') {
+            renderMobileDayOverlay();
+        }
+        saveData();
+    }
     if (movingBlockContext) movingBlockContext = null;
     if (creatingBlockContext) {
         let itemId = creatingBlockContext.item.id;
