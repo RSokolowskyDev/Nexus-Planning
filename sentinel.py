@@ -13,6 +13,9 @@ MODEL_ID = "gemini-3-flash-preview"
 MAX_RETRIES = 3
 RETRY_CAP = 120
 
+# Core app files Gemini reads when writing instructions (PLAN.md changed mode)
+CONTEXT_FILES = ['main.js', 'index.html', 'index.css']
+
 API_KEY = os.environ.get("GEMINI_API_KEY", "")
 if not API_KEY:
     print("--- SENTINEL ERROR: GEMINI_API_KEY environment variable is not set. ---")
@@ -26,7 +29,6 @@ IGNORE = {'.git', 'node_modules', '__pycache__', 'dist', 'AI_FEEDBACK.md',
           'codebase_snapshot.txt'}
 
 def get_changed_files():
-    """Return files changed in the last commit."""
     try:
         result = subprocess.run(
             ['git', 'diff-tree', '--no-commit-id', '-r', '--name-only', 'HEAD'],
@@ -43,57 +45,80 @@ def read_file_safe(path):
     except Exception:
         return None
 
-def run_analysis():
-    print(f"--- SENTINEL: Initializing Architect ({MODEL_ID})... ---")
-
-    # 1. PLAN.md — always included, defines the goal
-    plan_contents = read_file_safe("PLAN.md") or "(PLAN.md not found)"
-
-    # 2. Only the files that changed in the last commit
-    all_changed = get_changed_files()
-    changed_files = [
-        f for f in all_changed
-        if not any(ign in f for ign in IGNORE)
-        and f.endswith(('.js', '.py', '.html', '.css', '.json', '.md'))
-    ]
-
-    # Skip if nothing changed, or if only PLAN.md changed (no code to review yet)
-    code_files = [f for f in changed_files if not f.endswith('PLAN.md')]
-    if not code_files:
-        print("--- SENTINEL: Only plan/config files changed — no code to review. Skipping. ---")
-        sys.exit(0)
-
-    print(f"--- SENTINEL: Reviewing {len(code_files)} code file(s): {code_files} ---")
-
-    # 3. Build a compact payload — PLAN.md + only changed file contents
-    payload = f"PLAN.md:\n{plan_contents}\n\n{'='*60}\nCHANGED FILES:\n"
-    total_chars = len(payload)
-
-    for file_path in code_files:
+def build_payload(files):
+    payload = ""
+    total_chars = 0
+    for file_path in files:
         content = read_file_safe(file_path)
         if content is None:
             continue
         chunk = f"\n--- FILE: {file_path} ---\n{content}\n"
         payload += chunk
         total_chars += len(chunk)
+    return payload, total_chars
 
-    tokens_est = total_chars // 4
-    print(f"--- SENTINEL: Payload ~{tokens_est:,} tokens ({total_chars:,} chars) ---")
+def run_analysis():
+    print(f"--- SENTINEL: Initializing Architect ({MODEL_ID})... ---")
 
-    # 4. Prompt — kept minimal since payload is already focused
-    prompt = (
-        "ACT AS: Senior Lead Software Architect reviewing a code commit.\n"
-        "Your partner Claude Code will implement any changes you specify.\n\n"
-        "Review the CHANGED FILES below against the PLAN.md goals.\n"
-        "Check for bugs, missing logic, or anything that doesn't satisfy the plan.\n\n"
-        + payload +
-        "\n\nRespond with exactly one of these on the first line, then your reasoning:\n"
-        "[PASS]   — plan goals fully met, code is correct\n"
-        "[ACTION] — changes needed; list exact file, function, and what to change\n"
-        "[MANUAL] — critical error or security issue needing human review\n"
-    )
+    plan_contents = read_file_safe("PLAN.md") or "(PLAN.md not found)"
 
-    # 5. Call Gemini with retry on rate limits
+    all_changed = get_changed_files()
+    code_files = [
+        f for f in all_changed
+        if not any(ign in f for ign in IGNORE)
+        and f.endswith(('.js', '.html', '.css', '.json'))
+    ]
+    plan_changed = any(f.endswith('PLAN.md') for f in all_changed)
+
+    # --- MODE A: PLAN.md changed, no code changed ---
+    # Gemini reads existing core files and writes implementation instructions for Claude
+    if plan_changed and not code_files:
+        print("--- SENTINEL: PLAN.md updated — generating implementation instructions for Claude... ---")
+        payload, total_chars = build_payload(CONTEXT_FILES)
+        tokens_est = (len(plan_contents) + total_chars) // 4
+        print(f"--- SENTINEL: Payload ~{tokens_est:,} tokens ---")
+
+        prompt = (
+            "ACT AS: Senior Lead Software Architect. Your job is to write precise implementation\n"
+            "instructions for Claude Code, who will implement them and commit the result.\n\n"
+            "Read the PLAN.md goals and the existing codebase below. Write specific, actionable\n"
+            "instructions so Claude knows exactly what to add, change, or remove in which file.\n"
+            "Include exact function names, line references where helpful, and code snippets.\n\n"
+            f"PLAN.md:\n{plan_contents}\n\n"
+            "{'='*60}\nEXISTING CODE (for context):\n"
+            + payload +
+            "\n\nYour response MUST start with [ACTION] on its own line, followed by your instructions.\n"
+            "If the plan is already fully implemented, start with [PASS].\n"
+            "If there is a critical issue, start with [MANUAL].\n"
+        )
+
+    # --- MODE B: Code files changed ---
+    # Gemini verifies the implementation matches the plan
+    elif code_files:
+        print(f"--- SENTINEL: Verifying {len(code_files)} changed file(s): {code_files} ---")
+        payload, total_chars = build_payload(code_files)
+        tokens_est = (len(plan_contents) + total_chars) // 4
+        print(f"--- SENTINEL: Payload ~{tokens_est:,} tokens ---")
+
+        prompt = (
+            "ACT AS: Senior Lead Software Architect verifying a code commit.\n"
+            "Your partner Claude Code implemented the changes — verify they correctly satisfy the plan.\n\n"
+            "Check for bugs, missing logic, edge cases, or anything that doesn't match the plan goals.\n\n"
+            f"PLAN.md:\n{plan_contents}\n\n"
+            "{'='*60}\nCHANGED FILES:\n"
+            + payload +
+            "\n\nRespond with exactly one of these on the first line:\n"
+            "[PASS]   — implementation correct, plan goals fully met\n"
+            "[ACTION] — issues found; list exact file, function, and what to fix\n"
+            "[MANUAL] — critical error or security issue needing human review\n"
+        )
+
+    # --- Nothing relevant changed ---
+    else:
+        print("--- SENTINEL: No relevant changes detected. Skipping. ---")
+        sys.exit(0)
+
+    # --- CALL GEMINI with retry ---
     for attempt in range(1, MAX_RETRIES + 1):
         try:
             response = client.models.generate_content(
@@ -111,7 +136,7 @@ def run_analysis():
 
             if "[ACTION]" in feedback_upper:
                 with open("AI_FEEDBACK.md", "w", encoding='utf-8') as f:
-                    f.write(f"# Sentinel Audit: [ACTION] Required\n\n{feedback}")
+                    f.write(f"# Sentinel: [ACTION] Required\n\n{feedback}")
                 print("--- SENTINEL: [ACTION] — Handing off to Claude Code. ---")
                 sys.exit(2)
 
@@ -121,7 +146,6 @@ def run_analysis():
                 print("--- SENTINEL: [PASS] — Architect approved. ---")
                 sys.exit(0)
 
-            # No recognized tag
             with open("AI_FEEDBACK.md", "w", encoding='utf-8') as f:
                 f.write(f"# Ambiguous Response\n\n{feedback}")
             print("--- SENTINEL: Ambiguous response. Check AI_FEEDBACK.md. ---")
