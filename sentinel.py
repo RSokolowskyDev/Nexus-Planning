@@ -9,7 +9,7 @@ from google import genai
 warnings.filterwarnings("ignore")
 
 # --- CONFIGURATION ---
-MODEL_ID = "gemini-2.5-flash"
+MODEL_ID = "gemini-3-flash-preview"
 MAX_RETRIES = 3
 RETRY_CAP = 120
 CODEBASE_TXT = "codebase_snapshot.txt"
