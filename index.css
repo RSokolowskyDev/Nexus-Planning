@@ -1186,6 +1186,7 @@ body.zoom-day .cell-hour-label {
     z-index: 2;
     border-left: 4px solid;
     transition: transform 0.1s;
+    touch-action: none;
 }
 
 .mdo-event:active {
@@ -1210,7 +1211,7 @@ body.zoom-day .cell-hour-label {
     position: absolute;
     left: 0;
     right: 0;
-    height: 10px;
+    height: 20px;
     cursor: ns-resize;
     z-index: 1;
     background: transparent;
