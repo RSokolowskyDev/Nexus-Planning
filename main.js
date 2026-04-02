@@ -341,32 +341,44 @@ function renderMobileDayOverlay() {
             const handle = e.target.closest('.resize-handle');
             lastMdoInteractionMoved = false;
 
-            // Ensure dailyTimes entry exists for this day to allow modifications
-            if (!item.dailyTimes) item.dailyTimes = {};
-            if (!item.dailyTimes[dayOff]) {
-                let slotH = (parseInt(item.id, 36) % 3) * settings.defaultEventDurationHours;
-                if (settings.dayStartHour + slotH + settings.defaultEventDurationHours > settings.dayEndHour) slotH = 0;
-                item.dailyTimes[dayOff] = { startHour: settings.dayStartHour + slotH, durationH: settings.defaultEventDurationHours };
-            }
-
             if (handle) {
+                // Determine current duration and start hour (handling recurrence templates)
+                let currentStart = item.dailyTimes?.[dayOff]?.startHour;
+                let currentDur = item.dailyTimes?.[dayOff]?.durationH;
+
+                if (currentStart === undefined) {
+                    const template = item.dailyTimes?.[item.startDayOffset] || {};
+                    currentStart = template.startHour ?? (settings.dayStartHour + (parseInt(item.id, 36) % 3) * settings.defaultEventDurationHours);
+                    currentDur = template.durationH ?? settings.defaultEventDurationHours;
+                }
+
                 mdoResizingContext = {
                     item, edge: handle.classList.contains('top') ? 'top' : 'bottom',
                     dayOff, startMouseY: coords.y,
-                    initialStartHour: item.dailyTimes[dayOff].startHour,
-                    initialDurationH: item.dailyTimes[dayOff].durationH
+                    initialStartHour: currentStart,
+                    initialDurationH: currentDur
                 };
                 selectItem(item.id);
+                renderMobileDayOverlay(); // Visual feedback for selection
                 e.stopPropagation();
                 if (e.type === 'touchstart') e.preventDefault();
             } else {
                 mdoHoldStartY = coords.y;
                 mdoHoldTimer = setTimeout(() => {
+                    let currentStart = item.dailyTimes?.[dayOff]?.startHour;
+                    if (currentStart === undefined) {
+                        const template = item.dailyTimes?.[item.startDayOffset] || {};
+                        currentStart = template.startHour ?? (settings.dayStartHour + (parseInt(item.id, 36) % 3) * settings.defaultEventDurationHours);
+                    }
+
                     mdoDraggingContext = {
                         item, dayOff, startMouseY: coords.y,
-                        initialStartHour: item.dailyTimes[dayOff].startHour
+                        initialStartHour: currentStart
                     };
                     selectItem(item.id);
+                    renderMobileDayOverlay(); // Visual feedback
+                    el.style.opacity = '0.7';
+                    el.style.zIndex = '100';
                 }, 150);
             }
         };
@@ -1039,7 +1051,13 @@ function handleMove(e) {
         let newStart = Math.round((initialStartHour + hourDelta) / snapHours) * snapHours;
 
         if (newStart < settings.dayStartHour) newStart = settings.dayStartHour;
-        const currentDur = (item.dailyTimes && item.dailyTimes[dayOff]) ? item.dailyTimes[dayOff].durationH : settings.defaultEventDurationHours;
+
+        // Correctly detect duration from instance or template
+        let currentDur = item.dailyTimes?.[dayOff]?.durationH;
+        if (currentDur === undefined) {
+            currentDur = item.dailyTimes?.[item.startDayOffset]?.durationH ?? settings.defaultEventDurationHours;
+        }
+
         if (newStart + currentDur > settings.dayEndHour) newStart = settings.dayEndHour - currentDur;
 
         if (!item.dailyTimes) item.dailyTimes = {};
@@ -1311,6 +1329,10 @@ function selectItem(id) {
             }
         });
         if (!hasPinned) toggleDocsPane(false);
+    }
+
+    if (document.getElementById('mobile-day-overlay').style.display !== 'none') {
+        renderMobileDayOverlay();
     }
 }
 
