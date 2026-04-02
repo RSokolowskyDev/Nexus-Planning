@@ -209,16 +209,16 @@ function enterMobileDayView(dayOffset) {
     renderMobileDayOverlay();
 }
 
-function closeMobileDayView() {
+function closeMobileDayView(openItemId) {
     const overlay = document.getElementById('mobile-day-overlay');
     overlay.classList.add('mdo-closing');
-    
+
     // Smoothly wait for the CSS animation to finish before hiding
     setTimeout(() => {
         overlay.style.display = 'none';
         document.getElementById('app-wrapper').style.display = '';
         currentViewLevel = 'week';
-        
+
         // Sync the main calendar to match the day we were just looking at
         const dDate = new Date(state.originDate);
         dDate.setDate(state.originDate.getDate() + state.activeDayOffset);
@@ -227,6 +227,12 @@ function closeMobileDayView() {
         state.canvasX = (window.innerWidth / 2) - (dayCoords.x + state.colWidth / 2) * state.scale;
         state.canvasY = -dayCoords.y * state.scale + 60;
         updateTransform(true);
+
+        // If an item was tapped, select it and open docs pane now that app-wrapper is visible
+        if (openItemId) {
+            lastPaneHeight = '85vh';
+            selectItem(openItemId);
+        }
     }, 300);
 }
 
@@ -318,9 +324,8 @@ function renderMobileDayOverlay() {
     // Add click handlers for events
     schedule.querySelectorAll('.mdo-event').forEach(el => {
         el.addEventListener('click', () => {
-            selectItem(el.dataset.id);
-            closeMobileDayView();
-            toggleDocsPane(true);
+            const itemId = el.dataset.id;
+            closeMobileDayView(itemId);
         });
     });
 }
@@ -428,11 +433,9 @@ function renderMobileDayOverlay() {
 
             state.items.push(newItem);
             renderItems();
-            
-            // UI sequence: close day view, open docs
-            closeMobileDayView();
-            selectItem(newItem.id);
-            toggleDocsPane(true);
+
+            // UI sequence: close day view, then select+open docs after transition
+            closeMobileDayView(newItem.id);
             
             // Reset FAB
             fab.classList.remove('active');
@@ -974,8 +977,11 @@ function handleMove(e) {
         }
         if (e.type === 'touchmove') e.preventDefault();
     } else if (isResizingH) {
-        let newH = window.innerHeight - coords.y;
-        if (newH < 100) {
+        const dy = resizeHStartY - coords.y; // positive = dragged up = expand
+        let newH = resizeHStartHeight + dy;
+        const maxH = (viewport.clientHeight || window.innerHeight) - 60;
+        newH = Math.min(newH, maxH);
+        if (newH < 80) {
             toggleDocsPane(false); isResizingH = false; document.body.style.userSelect = '';
         } else {
             const pane = document.getElementById('docs-pane');
@@ -1402,6 +1408,7 @@ const btnToggleView = document.getElementById('btn-toggle-view');
 if (btnToggleView) btnToggleView.addEventListener('click', toggleView);
 
 let isResizingH = false, isResizingV = false;
+let resizeHStartY = 0, resizeHStartHeight = 0;
 document.getElementById('h-resizer').addEventListener('mousedown', (e) => { isResizingH = true; document.body.style.userSelect = 'none'; });
 document.getElementById('h-resizer').addEventListener('touchstart', (e) => { isResizingH = true; document.body.style.userSelect = 'none'; e.preventDefault(); }, { passive: false });
 document.getElementById('v-resizer').addEventListener('mousedown', (e) => { isResizingV = true; document.body.style.userSelect = 'none'; });
@@ -1412,8 +1419,11 @@ const mobileHandle = document.getElementById('docs-mobile-handle');
 if (mobileHandle) {
     mobileHandle.addEventListener('touchstart', (e) => {
         isResizingH = true;
+        resizeHStartY = e.touches[0].clientY;
+        resizeHStartHeight = document.getElementById('docs-pane').getBoundingClientRect().height;
         document.body.style.userSelect = 'none';
         e.preventDefault();
+        e.stopPropagation();
     }, { passive: false });
 }
 
