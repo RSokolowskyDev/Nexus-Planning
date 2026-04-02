@@ -1153,7 +1153,7 @@ body.zoom-day .cell-hour-label {
 .mdo-hour-row {
     display: flex;
     align-items: flex-start;
-    border-bottom: 1px solid rgba(255,255,255,0.1);
+    border-bottom: 2px solid rgba(255,255,255,0.2);
     min-height: 60px;
     position: relative;
 }
@@ -1172,7 +1172,7 @@ body.zoom-day .cell-hour-label {
     flex: 1;
     position: relative;
     min-height: 60px;
-    border-left: 1px solid rgba(255,255,255,0.15);
+    border-left: 2px solid rgba(255,255,255,0.25);
 }
 
 .mdo-event {
