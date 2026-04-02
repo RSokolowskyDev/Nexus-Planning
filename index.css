@@ -1790,6 +1790,127 @@ body.zoom-day .cell-hour-label {
     border-color: rgba(255,255,255,0.25);
 }
 
+/* ── Goals Panel ────────────────────────────────────────────────── */
+.goals-panel {
+    margin-top: 14px;
+    border-top: 1px solid var(--glass-border);
+    padding-top: 10px;
+}
+
+.goals-panel-header {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+    margin-bottom: 6px;
+}
+
+.goals-empty {
+    font-size: 11px;
+    color: var(--text-muted);
+    font-style: italic;
+}
+
+.goal-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 6px 4px;
+    border-radius: 6px;
+    transition: background 0.15s;
+}
+
+.goal-item:hover {
+    background: rgba(255,255,255,0.04);
+}
+
+.goal-item.completed {
+    text-decoration: line-through;
+    opacity: 0.6;
+}
+
+.goal-check-btn {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    border: 1px solid var(--glass-border);
+    background: transparent;
+    color: var(--text-main);
+    font-size: 11px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: background 0.15s, border-color 0.15s;
+    margin-top: 1px;
+}
+
+.goal-check-btn.checked {
+    background: var(--accent-primary);
+    border-color: var(--accent-primary);
+}
+
+.goal-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    flex: 1;
+    min-width: 0;
+}
+
+.goal-title {
+    font-size: 13px;
+    color: var(--text-main);
+}
+
+.goal-desc {
+    font-size: 11px;
+    color: var(--text-muted);
+}
+
+.goal-date {
+    font-size: 11px;
+    color: var(--accent-primary);
+}
+
+.goal-delete-btn {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 16px;
+    line-height: 1;
+    padding: 0 2px;
+    opacity: 0;
+    transition: opacity 0.15s;
+    flex-shrink: 0;
+}
+
+.goal-item:hover .goal-delete-btn { opacity: 1; }
+.goal-delete-btn:hover { color: #ff6b6b; }
+
+.add-goal-btn {
+    margin-top: 8px;
+    width: 100%;
+    background: rgba(255,255,255,0.03);
+    border: 1px dashed var(--glass-border);
+    color: var(--text-muted);
+    border-radius: 8px;
+    padding: 6px 0;
+    cursor: pointer;
+    font-size: 12px;
+    font-family: var(--font-family);
+    transition: all 0.2s;
+}
+
+.add-goal-btn:hover {
+    background: rgba(255,255,255,0.07);
+    color: var(--text-main);
+    border-color: rgba(255,255,255,0.25);
+}
+
 /* ── Vote Flash Animation ───────────────────────────────────────── */
 .vote-flash {
     position: absolute;

@@ -1887,6 +1887,26 @@ function setupIdentityUI() {
         renderIdentityPane();
     });
 
+    // Goal modal wiring
+    document.getElementById('cancel-goal').addEventListener('click', () => {
+        document.getElementById('goal-modal').classList.add('hidden');
+    });
+
+    document.getElementById('save-goal').addEventListener('click', () => {
+        const title = document.getElementById('goal-title').value.trim();
+        if (!title) return;
+        const identityId = document.getElementById('goal-identity').value || null;
+        identityService.addGoal({
+            identityId,
+            title,
+            description: document.getElementById('goal-description').value.trim(),
+            targetDate: document.getElementById('goal-target-date').value || null
+        });
+        identityService.saveIdentityData();
+        document.getElementById('goal-modal').classList.add('hidden');
+        renderIdentityPane();
+    });
+
     // Habit modal wiring
     document.getElementById('cancel-habit').addEventListener('click', () => {
         document.getElementById('habit-modal').classList.add('hidden');
@@ -1986,10 +2006,18 @@ function buildIdentityCard(identity, habits) {
 
     const habitsHTML = habits.map(h => buildHabitRowHTML(h, today)).join('');
 
+    const identityGoals = identityService.getGoals().filter(g => g.identityId === identity.id);
+    const goalsHTML = identityGoals.map(g => buildGoalRowHTML(g)).join('');
+
     card.innerHTML = `
         ${headerHTML}
         <div class="habits-list">${habitsHTML}</div>
         <button class="add-habit-btn" data-identity="${identity.id}">+ Add Habit</button>
+        <div class="goals-panel">
+            <div class="goals-panel-header">Goals</div>
+            <div class="goals-list">${goalsHTML || '<span class="goals-empty">No goals yet.</span>'}</div>
+            <button class="add-goal-btn" data-identity="${identity.id}">+ Add Goal</button>
+        </div>
     `;
 
     // Habit check buttons
@@ -2027,6 +2055,38 @@ function buildIdentityCard(identity, habits) {
             identityService.saveIdentityData();
             renderIdentityPane();
         });
+    });
+
+    // Goal check/delete buttons
+    card.querySelectorAll('.goal-check-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const goal = identityService.getGoals().find(g => g.id === btn.dataset.goal);
+            if (goal) identityService.updateGoal(goal.id, { completed: !goal.completed });
+            identityService.saveIdentityData();
+            renderIdentityPane();
+        });
+    });
+
+    card.querySelectorAll('.goal-delete-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            identityService.deleteGoal(btn.dataset.goal);
+            identityService.saveIdentityData();
+            renderIdentityPane();
+        });
+    });
+
+    // Add goal button
+    card.querySelector('.add-goal-btn').addEventListener('click', () => {
+        const select = document.getElementById('goal-identity');
+        select.innerHTML = identityService.getIdentities()
+            .map(i => `<option value="${i.id}" ${i.id === identity.id ? 'selected' : ''}>${i.name}</option>`)
+            .join('');
+        document.getElementById('goal-title').value = '';
+        document.getElementById('goal-description').value = '';
+        document.getElementById('goal-target-date').value = '';
+        document.getElementById('goal-modal').classList.remove('hidden');
     });
 
     // Add habit button
@@ -2080,6 +2140,24 @@ function buildHabitRowHTML(habit, today) {
                 </div>
                 <button class="habit-delete-btn" data-habit="${habit.id}" title="Remove habit">×</button>
             </div>
+        </div>
+    `;
+}
+
+function buildGoalRowHTML(goal) {
+    const dateLabel = goal.targetDate ? `<span class="goal-date">by ${goal.targetDate}</span>` : '';
+    const descLabel = goal.description ? `<span class="goal-desc">${goal.description}</span>` : '';
+    return `
+        <div class="goal-item ${goal.completed ? 'completed' : ''}">
+            <button class="goal-check-btn ${goal.completed ? 'checked' : ''}" data-goal="${goal.id}" title="${goal.completed ? 'Mark incomplete' : 'Mark complete'}">
+                ${goal.completed ? '✓' : ''}
+            </button>
+            <div class="goal-info">
+                <span class="goal-title">${goal.title}</span>
+                ${descLabel}
+                ${dateLabel}
+            </div>
+            <button class="goal-delete-btn" data-goal="${goal.id}" title="Remove goal">×</button>
         </div>
     `;
 }

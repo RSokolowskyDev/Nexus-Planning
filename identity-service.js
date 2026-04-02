@@ -4,6 +4,7 @@ import { db, auth, doc, setDoc, getDoc } from "./firebase-config.js";
 let identities = [];
 let links = [];
 let habits = [];
+let goals = [];
 
 export function addIdentity(name, color = 'blue') {
     const id = Math.random().toString(36).substring(2, 9);
@@ -72,13 +73,13 @@ export function deleteIdentity(identityId) {
 
 export async function saveIdentityData() {
     // Always save to localStorage for guests
-    localStorage.setItem('nexus_identity', JSON.stringify({ identities, links, habits }));
+    localStorage.setItem('nexus_identity', JSON.stringify({ identities, links, habits, goals }));
 
     const user = auth.currentUser;
     if (!user) return;
 
     try {
-        await setDoc(doc(db, "users", user.uid), { identities, links, habits }, { merge: true });
+        await setDoc(doc(db, "users", user.uid), { identities, links, habits, goals }, { merge: true });
     } catch (e) {
         console.error("Identity Save Error:", e);
     }
@@ -93,6 +94,7 @@ export async function loadIdentityData() {
             identities = data.identities || [];
             links = data.links || [];
             habits = data.habits || [];
+            goals = data.goals || [];
         } catch (e) { /* ignore */ }
     }
 
@@ -106,10 +108,30 @@ export async function loadIdentityData() {
             if (data.identities) identities = data.identities;
             if (data.links) links = data.links;
             if (data.habits) habits = data.habits;
+            if (data.goals) goals = data.goals;
         }
     } catch (e) {
         console.error("Identity Load Error:", e);
     }
+}
+
+export function getGoals() { return goals; }
+
+export function addGoal({ identityId, title, description = '', targetDate = null }) {
+    const id = Math.random().toString(36).substring(2, 9);
+    const goal = { id, identityId, title, description, targetDate, completed: false, createdAt: new Date().toISOString() };
+    goals.push(goal);
+    return goal;
+}
+
+export function updateGoal(id, updates) {
+    const goal = goals.find(g => g.id === id);
+    if (!goal) return;
+    Object.assign(goal, updates);
+}
+
+export function deleteGoal(id) {
+    goals = goals.filter(g => g.id !== id);
 }
 
 export function getIdentities() { return identities; }
