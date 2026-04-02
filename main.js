@@ -2006,7 +2006,7 @@ function buildIdentityCard(identity, habits) {
 
     const habitsHTML = habits.map(h => buildHabitRowHTML(h, today)).join('');
 
-    const identityGoals = identityService.getGoals().filter(g => g.identityId === identity.id);
+    const identityGoals = identityService.getGoalsByIdentity(identity.id);
     const goalsHTML = identityGoals.map(g => buildGoalRowHTML(g)).join('');
 
     card.innerHTML = `

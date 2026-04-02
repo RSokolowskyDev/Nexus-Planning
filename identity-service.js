@@ -117,6 +117,7 @@ export async function loadIdentityData() {
 }
 
 export function getGoals() { return goals; }
+export function getGoalsByIdentity(identityId) { return goals.filter(g => g.identityId === identityId); }
 
 export function addGoal({ identityId, title, description = '', targetDate = null }) {
     const id = Math.random().toString(36).substring(2, 9);
