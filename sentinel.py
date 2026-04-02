@@ -1,9 +1,11 @@
+import warnings
+warnings.filterwarnings("ignore", category=FutureWarning)
 import os
 import sys
 import google.generativeai as genai
 
 # 1. Setup - Make sure this key matches your Google AI Studio exactly
-genai.configure(api_key="AlzaSyCS_wq3-_O4tyP5L_mNkhmA4Nbh9_lc6kA")
+genai.configure(api_key="AIzaSyBJFXJoe8OdSsiSD-odRvAQksZikzTukfQ")
 
 # Using the 1.5 Flash model - it's fast and reliable for this
 model = genai.GenerativeModel('gemini-1.5-flash')
