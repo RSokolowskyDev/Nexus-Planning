@@ -98,7 +98,8 @@ function init() {
         state.scale = isPortrait() ? 0.45 : 0.6;
     }
     state.canvasX = window.innerWidth / 2 - (state.calendarStartX + (state.colWidth * 3.5)) * state.scale;
-    state.canvasY = window.innerHeight / 4 - state.calendarStartY * state.scale;
+    const vph = viewport.clientHeight || window.innerHeight;
+    state.canvasY = vph / 4 - state.calendarStartY * state.scale;
 
     document.getElementById('doc-2').style.display = 'none';
     document.getElementById('v-resizer').style.display = 'none';

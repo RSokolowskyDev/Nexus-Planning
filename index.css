@@ -1446,6 +1446,8 @@ body.zoom-day .cell-hour-label {
 #identity-pane.collapsed {
     width: 0;
     min-width: 0;
+    height: 0;
+    min-height: 0;
     border-right: none;
     transform: translateX(-20px);
     opacity: 0;
