@@ -12,8 +12,22 @@
 <body>
     <div id="app-wrapper">
         <header class="top-nav">
+            <button class="tool-btn" id="btn-toggle-identity" title="Toggle Identity Blueprint">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+                    <circle cx="9" cy="7" r="4" />
+                    <polyline points="16 11 18 13 22 9" />
+                </svg>
+            </button>
             <h1 class="logo">Nexus<span>Plan</span></h1>
             <div class="toolbar">
+                <button class="tool-btn" id="tool-link" title="Habit-Stacking Link (Link two events)">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+                        <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+                    </svg>
+                </button>
+                <div class="divider"></div>
                 <button class="tool-btn active" id="tool-pan" title="Move / Pan (Click & Drag)"><svg width="24"
                         height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M10 2L2 10l8 8M14 2l8 8-8 8" />
@@ -83,10 +97,25 @@
 
 
         <div id="main-split">
+            <!-- Left Pane: Identity Sidecar -->
+            <div id="identity-pane" class="collapsed">
+                <div class="pane-header">
+                    <h2>Identity Blueprint</h2>
+                    <button class="icon-btn" id="add-identity" title="Add New Identity">+</button>
+                </div>
+                <div id="identity-list" class="list-container">
+                    <!-- Identities will be injected here -->
+                </div>
+                <div class="blueprint-stats">
+                    <p>Total Habit Votes: <span id="total-votes">0</span></p>
+                </div>
+            </div>
+
             <!-- Top Pane: Calendar Canvas -->
             <div id="calendar-pane">
                 <div id="viewport">
                     <div id="canvas">
+                        <svg id="connectors-layer" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none;"></svg>
                         <div id="calendar-grid"></div>
                         <div id="items-container"></div>
                     </div>
@@ -109,6 +138,14 @@
                         <div style="display: flex; gap: 8px; align-items: center;">
                             <span class="doc-view-label"></span>
                             <button class="pin-btn" data-pinned="false">⚡ Dynamic View</button>
+                            <button class="tool-btn" id="btn-atomic-mode" title="Atomic Mode (The 2-Minute Rule)" style="padding: 2px 6px;">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="12" cy="12" r="3" />
+                                    <ellipse cx="12" cy="12" rx="10" ry="4" stroke-opacity="0.5" />
+                                    <ellipse cx="12" cy="12" rx="10" ry="4" transform="rotate(60 12 12)" stroke-opacity="0.5" />
+                                    <ellipse cx="12" cy="12" rx="10" ry="4" transform="rotate(120 12 12)" stroke-opacity="0.5" />
+                                </svg>
+                            </button>
                             <button class="btn-delete" id="btn-delete-doc-1" title="Delete Event">
                                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-trash-2"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
                             </button>

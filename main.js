@@ -1,4 +1,5 @@
 import { initAuth, saveToCloud } from "./auth-manager.js";
+import * as identityService from "./identity-service.js";
 
 let state = {
     canvasX: 0, canvasY: 0, scale: 1,
@@ -8,7 +9,9 @@ let state = {
     calendarStartX: 45000, calendarStartY: 45000,
     originYear: 0, originMonth: 0, originDate: null,
     activeDayOffset: 0,
-    lastTapTime: 0
+    lastTapTime: 0,
+    isAtomicMode: false,
+    linkingSourceId: null
 };
 
 let pinchContext = null;
@@ -109,6 +112,7 @@ function init() {
     syncDocWindows();
 
     setupAuth();
+    setupIdentityUI();
     
     const resizeObserver = new ResizeObserver(() => {
         if (state.canvasX !== undefined) {

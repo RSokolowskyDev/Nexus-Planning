@@ -1,5 +1,5 @@
 
-import { auth, db, provider, signInWithPopup, signOut, onAuthStateChanged, doc, setDoc, getDoc } from "./firebase-config.js";
+import { auth, db, provider, signInWithPopup, signInWithRedirect, getRedirectResult, signOut, onAuthStateChanged, doc, setDoc, getDoc } from "./firebase-config.js";
 
 const loginBtn = document.getElementById('btn-login');
 const userProfile = document.getElementById('user-profile');
@@ -10,6 +10,13 @@ const authLoading = document.getElementById('auth-loading');
 let currentUser = null;
 
 export function initAuth(onUserChange) {
+    // Handle redirect result (for mobile/fallback)
+    getRedirectResult(auth).catch(err => {
+        if (err.code === 'auth/unauthorized-domain') {
+            alert("Error: This domain is not authorized in Firebase Console. Please add 'rsokolowskydev.github.io' to Authorized Domains.");
+        }
+    });
+
     onAuthStateChanged(auth, async (user) => {
         authLoading.classList.add('hidden');
         if (user) {
@@ -31,7 +38,15 @@ export function initAuth(onUserChange) {
     });
 
     loginBtn.addEventListener('click', () => {
-        signInWithPopup(auth, provider).catch(err => console.error("Login Error:", err));
+        // Try popup, fallback to redirect if it fails (often due to blockers or domain issues)
+        signInWithPopup(auth, provider).catch(err => {
+            console.warn("Popup blocked or failed, trying redirect...", err);
+            if (err.code === 'auth/unauthorized-domain') {
+                alert("This domain is not authorized. Please add 'rsokolowskydev.github.io' to Authentication > Settings > Authorized domains in Firebase.");
+            } else {
+                signInWithRedirect(auth, provider);
+            }
+        });
     });
 
     userAvatar.addEventListener('click', () => {
