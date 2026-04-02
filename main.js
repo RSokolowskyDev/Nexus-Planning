@@ -1,3 +1,5 @@
+import { initAuth, saveToCloud } from "./auth-manager.js";
+
 let state = {
     canvasX: 0, canvasY: 0, scale: 1,
     isPanning: false, startX: 0, startY: 0, basePanX: 0, basePanY: 0,
@@ -106,6 +108,8 @@ function init() {
     renderItems();
     syncDocWindows();
 
+    setupAuth();
+    
     const resizeObserver = new ResizeObserver(() => {
         if (state.canvasX !== undefined) {
             renderGrid();
@@ -1003,7 +1007,9 @@ function finalizeDrags() {
         let itemId = creatingBlockContext.item.id;
         creatingBlockContext = null;
         setActiveTool('select');
+        renderItems();
         syncDocWindows();
+        saveData();
     }
     if (draggingBlock) {
         const item = state.items.find(i => i.id === draggingBlock.itemId);
@@ -1018,6 +1024,7 @@ function finalizeDrags() {
             item.dailyTimes[currentActiveDayOff] = { startHour: targetStartHour, durationH: existingDur };
             renderItems();
             syncDocWindows();
+            saveData();
         }
         draggingBlock = null;
     }
@@ -1111,6 +1118,7 @@ viewport.addEventListener('dblclick', (e) => {
             }
             state.items.push(newItem);
             setActiveTool('select'); selectItem(newItem.id); renderItems();
+            saveData();
         }
     }
 });
@@ -1127,6 +1135,7 @@ function deleteItem(id) {
 
     renderItems();
     syncDocWindows();
+    saveData();
 
     if (state.selectedItemIds.length === 0) {
         let hasPinned = false;
@@ -1620,11 +1629,11 @@ function loadItemIntoDocWindow(win, loadedItemId) {
     repeatSelect.value = item.repeat || "none";
     editor.value = item.notes[currentViewLevel] || "";
 
-    title.oninput = (e) => { item.title = e.target.value; renderItems(); };
-    peopleInput.oninput = (e) => { item.people = e.target.value; };
-    goalsInput.oninput = (e) => { item.goals = e.target.value; };
-    repeatSelect.onchange = (e) => { item.repeat = e.target.value; renderItems(); };
-    editor.oninput = (e) => { item.notes[currentViewLevel] = e.target.value; };
+    title.oninput = (e) => { item.title = e.target.value; renderItems(); saveData(); };
+    peopleInput.oninput = (e) => { item.people = e.target.value; saveData(); };
+    goalsInput.oninput = (e) => { item.goals = e.target.value; saveData(); };
+    repeatSelect.onchange = (e) => { item.repeat = e.target.value; renderItems(); saveData(); };
+    editor.oninput = (e) => { item.notes[currentViewLevel] = e.target.value; saveData(); };
 }
 
 const modal = document.getElementById('settings-modal');
@@ -1655,6 +1664,36 @@ function setupDummyData() {
         dailyTimes: { 0: { startHour: 9.5, durationH: 4 } },
         people: "Alice, Bob", goals: "User interviews", repeat: "none"
     });
+}
+
+function setupAuth() {
+    initAuth((user, cloudData) => {
+        if (user) {
+            if (cloudData) {
+                state.items = cloudData;
+            } else {
+                // First time login - sync existing local data to cloud
+                saveToCloud(state.items);
+            }
+        } else {
+            // Load from local storage for guests
+            const local = localStorage.getItem('nexus_items');
+            if (local) {
+                try {
+                    state.items = JSON.parse(local);
+                } catch (e) {
+                    console.error("Local load error", e);
+                }
+            }
+        }
+        renderItems();
+        syncDocWindows();
+    });
+}
+
+function saveData() {
+    localStorage.setItem('nexus_items', JSON.stringify(state.items));
+    saveToCloud(state.items);
 }
 
 init();

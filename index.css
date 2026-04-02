@@ -19,6 +19,29 @@
     --color-purple: #8b5cf6;
 
     --day-segments: 24;
+    --transition-smooth: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+#user-controls {
+    transition: opacity 0.3s var(--transition-smooth);
+}
+
+#user-avatar {
+    transition: transform 0.2s var(--transition-smooth);
+}
+
+#user-avatar:hover {
+    transform: scale(1.1);
+}
+
+.auth-loading {
+    animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+    0% { opacity: 0.5; }
+    50% { opacity: 1; }
+    100% { opacity: 0.5; }
 }
 
 * {
