@@ -14,6 +14,10 @@ let state = {
     linkingSourceId: null
 };
 
+let mdoDraggingContext = null;
+let mdoResizingContext = null;
+let lastMdoInteractionMoved = false;
+
 let pinchContext = null;
 
 function getCoords(e) {
@@ -323,10 +327,47 @@ function renderMobileDayOverlay() {
     html += '</div>';
     schedule.innerHTML = html;
 
-    // Add click handlers for events
+    // Add touch and click handlers for events
     schedule.querySelectorAll('.mdo-event').forEach(el => {
+        const itemId = el.dataset.id;
+        const dayOff = parseInt(el.dataset.dayoff);
+        const item = state.items.find(i => i.id === itemId);
+
+        const onStart = (e) => {
+            const coords = getCoords(e);
+            const handle = e.target.closest('.resize-handle');
+            lastMdoInteractionMoved = false;
+
+            // Ensure dailyTimes entry exists for this day to allow modifications
+            if (!item.dailyTimes) item.dailyTimes = {};
+            if (!item.dailyTimes[dayOff]) {
+                let slotH = (parseInt(item.id, 36) % 3) * settings.defaultEventDurationHours;
+                if (settings.dayStartHour + slotH + settings.defaultEventDurationHours > settings.dayEndHour) slotH = 0;
+                item.dailyTimes[dayOff] = { startHour: settings.dayStartHour + slotH, durationH: settings.defaultEventDurationHours };
+            }
+
+            if (handle) {
+                mdoResizingContext = {
+                    item, edge: handle.classList.contains('top') ? 'top' : 'bottom',
+                    dayOff, startMouseY: coords.y,
+                    initialStartHour: item.dailyTimes[dayOff].startHour,
+                    initialDurationH: item.dailyTimes[dayOff].durationH
+                };
+                e.stopPropagation();
+                if (e.type === 'touchstart') e.preventDefault();
+            } else {
+                mdoDraggingContext = {
+                    item, dayOff, startMouseY: coords.y,
+                    initialStartHour: item.dailyTimes[dayOff].startHour
+                };
+            }
+        };
+
+        el.addEventListener('touchstart', onStart, { passive: false });
+        el.addEventListener('mousedown', onStart);
+
         el.addEventListener('click', () => {
-            const itemId = el.dataset.id;
+            if (lastMdoInteractionMoved) return;
             closeMobileDayView(itemId);
         });
     });
@@ -976,6 +1017,56 @@ function handleMove(e) {
             renderItems(); syncDocWindows();
         }
         if (e.type === 'touchmove') e.preventDefault();
+    } else if (mdoDraggingContext) {
+        const { item, dayOff, startMouseY, initialStartHour } = mdoDraggingContext;
+        const dy = coords.y - startMouseY;
+        const hourDelta = dy / 60; // 60px = 1 hour in MDO
+        const snapHours = settings.snapMinutes / 60;
+        let newStart = Math.round((initialStartHour + hourDelta) / snapHours) * snapHours;
+
+        if (newStart < settings.dayStartHour) newStart = settings.dayStartHour;
+        const currentDur = (item.dailyTimes && item.dailyTimes[dayOff]) ? item.dailyTimes[dayOff].durationH : settings.defaultEventDurationHours;
+        if (newStart + currentDur > settings.dayEndHour) newStart = settings.dayEndHour - currentDur;
+
+        if (!item.dailyTimes) item.dailyTimes = {};
+        if (!item.dailyTimes[dayOff] || item.dailyTimes[dayOff].startHour !== newStart) {
+            item.dailyTimes[dayOff] = { startHour: newStart, durationH: currentDur };
+            lastMdoInteractionMoved = true;
+            renderMobileDayOverlay();
+        }
+        if (e.type === 'touchmove') e.preventDefault();
+    } else if (mdoResizingContext) {
+        const { item, edge, dayOff, startMouseY, initialStartHour, initialDurationH } = mdoResizingContext;
+        const dy = coords.y - startMouseY;
+        const hourDelta = dy / 60;
+        const snapHours = settings.snapMinutes / 60;
+        let needsRender = false;
+
+        if (edge === 'bottom') {
+            let newDur = Math.round((initialDurationH + hourDelta) / snapHours) * snapHours;
+            if (newDur < snapHours) newDur = snapHours;
+            if (initialStartHour + newDur > settings.dayEndHour) newDur = settings.dayEndHour - initialStartHour;
+            if (item.dailyTimes[dayOff].durationH !== newDur) {
+                item.dailyTimes[dayOff].durationH = newDur;
+                needsRender = true;
+            }
+        } else { // top
+            let hourShift = Math.round(hourDelta / snapHours) * snapHours;
+            let newStart = initialStartHour + hourShift;
+            let newDur = initialDurationH - hourShift;
+            if (newDur < snapHours) { const diff = snapHours - newDur; newStart -= diff; newDur = snapHours; }
+            if (newStart < settings.dayStartHour) { const diff = settings.dayStartHour - newStart; newStart = settings.dayStartHour; newDur -= diff; }
+            if (item.dailyTimes[dayOff].startHour !== newStart || item.dailyTimes[dayOff].durationH !== newDur) {
+                item.dailyTimes[dayOff].startHour = newStart;
+                item.dailyTimes[dayOff].durationH = newDur;
+                needsRender = true;
+            }
+        }
+        if (needsRender) {
+            lastMdoInteractionMoved = true;
+            renderMobileDayOverlay();
+        }
+        if (e.type === 'touchmove') e.preventDefault();
     } else if (isResizingH) {
         const dy = resizeHStartY - coords.y; // positive = dragged up = expand
         let newH = resizeHStartHeight + dy;
@@ -1018,6 +1109,11 @@ function finalizeDrags() {
         if (mdoOverlay && mdoOverlay.style.display !== 'none') {
             renderMobileDayOverlay();
         }
+        saveData();
+    }
+    if (mdoDraggingContext || mdoResizingContext) {
+        mdoDraggingContext = null;
+        mdoResizingContext = null;
         saveData();
     }
     if (movingBlockContext) movingBlockContext = null;
@@ -2025,4 +2121,3 @@ function initOnboarding() {
 }
 
 initOnboarding();
-// TODO: The overlay is still closing, please fix the logic in the function below.
