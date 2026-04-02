@@ -388,10 +388,83 @@ function renderMobileDayOverlay() {
 
         el.addEventListener('click', () => {
             if (lastMdoInteractionMoved) return;
-            closeMobileDayView(itemId);
+            openMdoDocPanel(itemId);
         });
     });
 }
+
+function openMdoDocPanel(itemId) {
+    const item = state.items.find(i => i.id === itemId);
+    if (!item) return;
+
+    const panel = document.getElementById('mdo-doc-panel');
+    const titleEl = document.getElementById('mdo-doc-title');
+    const body = document.getElementById('mdo-doc-body');
+
+    titleEl.textContent = item.title;
+
+    const dayOff = state.activeDayOffset;
+    let tBlock = item.dailyTimes?.[dayOff] || item.dailyTimes?.[item.startDayOffset] || {};
+    const startStr = tBlock.startHour != null ? decimalToTimeInput(tBlock.startHour) : '';
+    const endStr = tBlock.startHour != null ? decimalToTimeInput(tBlock.startHour + (tBlock.durationH || 1)) : '';
+
+    body.innerHTML = `
+        <div class="doc-field">
+            <label>Title</label>
+            <input type="text" id="mdo-field-title" value="${item.title.replace(/"/g, '&quot;')}">
+        </div>
+        <div class="doc-field">
+            <label>Time</label>
+            <div style="display:flex;gap:8px;align-items:center;">
+                <input type="time" id="mdo-field-start" value="${startStr}" style="flex:1;">
+                <span style="color:var(--text-muted)">–</span>
+                <input type="time" id="mdo-field-end" value="${endStr}" style="flex:1;">
+            </div>
+        </div>
+        <div class="doc-field">
+            <label>Notes</label>
+            <textarea id="mdo-field-notes">${item.notes?.day || ''}</textarea>
+        </div>
+        <div class="doc-field">
+            <label>People</label>
+            <input type="text" id="mdo-field-people" value="${item.people || ''}">
+        </div>
+    `;
+
+    // Live save on any field change
+    body.querySelectorAll('input, textarea').forEach(el => {
+        el.addEventListener('change', () => {
+            item.title = document.getElementById('mdo-field-title').value || item.title;
+            if (!item.notes) item.notes = {};
+            item.notes.day = document.getElementById('mdo-field-notes').value;
+            item.people = document.getElementById('mdo-field-people').value;
+
+            const startVal = document.getElementById('mdo-field-start').value;
+            const endVal = document.getElementById('mdo-field-end').value;
+            if (startVal && endVal) {
+                const [sh, sm] = startVal.split(':').map(Number);
+                const [eh, em] = endVal.split(':').map(Number);
+                const newStart = sh + sm / 60;
+                const newDur = Math.max(0.5, (eh + em / 60) - newStart);
+                if (!item.dailyTimes) item.dailyTimes = {};
+                item.dailyTimes[dayOff] = { startHour: newStart, durationH: newDur };
+            }
+
+            titleEl.textContent = item.title;
+            saveData();
+            renderMobileDayOverlay();
+        });
+    });
+
+    panel.style.display = 'flex';
+    selectItem(itemId);
+}
+
+// Wire up the doc panel close button (runs once at init)
+document.getElementById('mdo-doc-close').addEventListener('click', () => {
+    document.getElementById('mdo-doc-panel').style.display = 'none';
+    selectItem(null);
+});
 
 // Swipe handling for the mobile day overlay
 (function setupMobileDayOverlayGestures() {

@@ -1260,6 +1260,106 @@ body.zoom-day .cell-hour-label {
     bottom: 3px;
 }
 
+/* Mobile Day View — inline doc panel */
+#mdo-doc-panel {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    max-height: 70vh;
+    background: var(--bg-grid);
+    border-top: 1px solid var(--glass-border);
+    border-radius: 16px 16px 0 0;
+    display: flex;
+    flex-direction: column;
+    z-index: 200;
+    box-shadow: 0 -8px 32px rgba(0,0,0,0.4);
+    animation: mdo-panel-slide-up 0.25s cubic-bezier(0.1, 0.9, 0.2, 1);
+}
+
+@keyframes mdo-panel-slide-up {
+    from { transform: translateY(100%); }
+    to   { transform: translateY(0); }
+}
+
+#mdo-doc-handle {
+    padding: 10px 0 4px;
+    display: flex;
+    justify-content: center;
+    cursor: grab;
+    flex-shrink: 0;
+}
+
+#mdo-doc-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 4px 16px 12px;
+    flex-shrink: 0;
+    border-bottom: 1px solid var(--glass-border);
+}
+
+.mdo-doc-title-text {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text-main);
+    flex: 1;
+}
+
+#mdo-doc-close {
+    background: rgba(255,255,255,0.08);
+    border: none;
+    color: var(--text-muted);
+    font-size: 14px;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+#mdo-doc-body {
+    overflow-y: auto;
+    flex: 1;
+    padding: 16px;
+    font-size: 13px;
+    color: var(--text-muted);
+    line-height: 1.6;
+}
+
+#mdo-doc-body .doc-field {
+    margin-bottom: 14px;
+}
+
+#mdo-doc-body .doc-field label {
+    display: block;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--text-muted);
+    margin-bottom: 4px;
+}
+
+#mdo-doc-body .doc-field input,
+#mdo-doc-body .doc-field textarea,
+#mdo-doc-body .doc-field select {
+    width: 100%;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid var(--glass-border);
+    border-radius: 8px;
+    color: var(--text-main);
+    padding: 8px 10px;
+    font-size: 13px;
+    box-sizing: border-box;
+}
+
+#mdo-doc-body .doc-field textarea {
+    resize: none;
+    height: 72px;
+}
+
 /* Event color variants */
 .mdo-event.color-pink {
     background: rgba(236, 72, 153, 0.2);
