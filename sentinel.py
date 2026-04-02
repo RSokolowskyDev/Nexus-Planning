@@ -13,7 +13,11 @@ warnings.filterwarnings("ignore")
 
 # --- CONFIGURATION ---
 MODEL_ID = "gemini-2.5-flash"
-API_KEY = "AIzaSyBJFXJoe8OdSsiSD-odRvAQksZikzTukfQ"
+API_KEY = os.environ.get("GEMINI_API_KEY", "")
+if not API_KEY:
+    print("--- SENTINEL ERROR: GEMINI_API_KEY environment variable is not set. ---")
+    print("--- Run in PowerShell: [System.Environment]::SetEnvironmentVariable('GEMINI_API_KEY', 'your-key', 'User') ---")
+    sys.exit(1)
 
 client = genai.Client(api_key=API_KEY)
 

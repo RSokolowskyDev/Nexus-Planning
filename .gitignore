@@ -1,0 +1,6 @@
+.env
+.env.*
+*.env
+.sentinel_lock
+.sentinel_iterations
+AI_FEEDBACK.md
