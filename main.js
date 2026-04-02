@@ -434,9 +434,9 @@ function renderMobileDayOverlay() {
             };
 
             state.items.push(newItem);
-            renderItems();
-            selectItem(newItem.id);
-            
+            renderMobileDayOverlay();
+            saveData();
+
             // Reset FAB
             fab.classList.remove('active');
             menu.classList.remove('active');
