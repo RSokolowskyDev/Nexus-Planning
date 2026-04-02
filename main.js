@@ -2025,3 +2025,4 @@ function initOnboarding() {
 }
 
 initOnboarding();
+// TODO: The overlay is still closing, please fix the logic in the function below.

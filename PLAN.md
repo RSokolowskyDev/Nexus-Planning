@@ -1,2 +1,2 @@
 ## Current Goal
-[ ] Refactor: Maintain Mobile Day View overlay after event creation.
+[ ] TASK: Implement strict state persistence for Mobile Day View.
