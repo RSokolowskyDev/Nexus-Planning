@@ -69,6 +69,7 @@ export function deleteHabit(habitId) {
 export function deleteIdentity(identityId) {
     identities = identities.filter(i => i.id !== identityId);
     habits = habits.filter(h => h.identityId !== identityId);
+    goals = goals.filter(g => g.identityId !== identityId);
 }
 
 export async function saveIdentityData() {
@@ -140,3 +141,4 @@ export function getHabits() { return habits; }
 export function setIdentities(data) { identities = data; }
 export function setLinks(data) { links = data; }
 export function setHabits(data) { habits = data; }
+export function setGoals(data) { goals = data; }
