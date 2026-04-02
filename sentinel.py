@@ -1,18 +1,19 @@
 import os
+import re
 import sys
+import time
 import warnings
+from pathlib import Path
 from google import genai
-
-try:
-    import PIL.Image
-    HAS_PILLOW = True
-except ImportError:
-    HAS_PILLOW = False
 
 warnings.filterwarnings("ignore")
 
 # --- CONFIGURATION ---
-MODEL_ID = "gemini-2.0-flash"
+MODEL_ID = "gemini-2.5-flash"
+MAX_RETRIES = 3
+RETRY_CAP = 120
+CODEBASE_TXT = "codebase_snapshot.txt"
+
 API_KEY = os.environ.get("GEMINI_API_KEY", "")
 if not API_KEY:
     print("--- SENTINEL ERROR: GEMINI_API_KEY environment variable is not set. ---")
@@ -21,104 +22,129 @@ if not API_KEY:
 
 client = genai.Client(api_key=API_KEY)
 
-# Project-specific ignore list
-IGNORE = {'.git', 'node_modules', '__pycache__', 'dist', 'AI_FEEDBACK.md', 'sentinel.py', '.env', '.sentinel_lock'}
+IGNORE = {'.git', 'node_modules', '__pycache__', 'dist', 'AI_FEEDBACK.md',
+          'sentinel.py', '.env', '.sentinel_lock', '.sentinel_iterations',
+          'codebase_snapshot.txt'}
 
-def run_analysis():
-    message_parts = []
-    codebase_text = "--- CODEBASE & PLAN ---\n"
-
-    print(f"--- SENTINEL: Initializing Architect ({MODEL_ID})... ---")
-
-    # 1. SCAN FILES
+def build_codebase_txt():
+    """Write entire codebase to a single .txt file for upload."""
+    lines = ["NEXUS PLANNING — FULL CODEBASE SNAPSHOT\n", "=" * 60 + "\n\n"]
     for root, dirs, files in os.walk("."):
         dirs[:] = [d for d in dirs if d not in IGNORE]
-        for file in files:
+        for file in sorted(files):
             file_path = os.path.join(root, file)
-
+            if any(ign in file_path for ign in IGNORE):
+                continue
             if file.endswith(('.py', '.js', '.md', '.html', '.css', '.json')):
                 try:
                     with open(file_path, 'r', encoding='utf-8') as f:
-                        codebase_text += f"\n\n--- FILE: {file_path} ---\n{f.read()}"
+                        content = f.read()
+                    lines.append(f"\n\n{'=' * 60}\n")
+                    lines.append(f"FILE: {file_path}\n")
+                    lines.append(f"{'=' * 60}\n")
+                    lines.append(content)
                 except:
                     continue
+    with open(CODEBASE_TXT, 'w', encoding='utf-8') as f:
+        f.writelines(lines)
+    size_kb = Path(CODEBASE_TXT).stat().st_size // 1024
+    print(f"--- SENTINEL: Codebase snapshot built ({size_kb} KB) ---")
 
-            elif HAS_PILLOW and file.endswith(('.png', '.jpg', '.jpeg', '.webp')):
-                try:
-                    img = PIL.Image.open(file_path)
-                    message_parts.append(img)
-                    print(f"--- SENTINEL: Processing image context: {file} ---")
-                except:
-                    continue
+def run_analysis():
+    print(f"--- SENTINEL: Initializing Architect ({MODEL_ID})... ---")
 
-    # 2. ARCHITECT PROMPT — driven entirely by PLAN.md contents
-    plan_contents = ""
+    # 1. Read PLAN.md
     try:
         with open("PLAN.md", "r", encoding="utf-8") as f:
             plan_contents = f.read().strip()
     except FileNotFoundError:
-        plan_contents = "(PLAN.md not found — review code quality and consistency generally)"
+        plan_contents = "(PLAN.md not found — review code quality generally)"
 
+    # 2. Build and upload the codebase as a .txt file
+    build_codebase_txt()
+    print("--- SENTINEL: Uploading codebase snapshot to Gemini Files API... ---")
+    uploaded_file = client.files.upload(file=CODEBASE_TXT)
+    print(f"--- SENTINEL: Upload complete ({uploaded_file.name}) ---")
+
+    # 3. Prompt — small, references the uploaded file
     prompt = (
         "ACT AS: Senior Lead Software Architect. You are the planning brain of a two-AI pipeline.\n"
         "Your partner is Claude Code, who implements whatever instructions you provide.\n\n"
+        "The attached file contains the full codebase. Review it against the current PLAN.md goals below.\n\n"
         "YOUR TASK:\n"
-        "1. Read PLAN.md (included below in the codebase) to understand the current goals.\n"
-        "2. Review the full codebase to assess whether those goals have been correctly implemented.\n"
-        "3. Check for bugs, incomplete logic, edge cases, or anything that conflicts with the plan.\n"
-        "4. If goals are fully met and code is clean: output [PASS].\n"
-        "5. If fixes or improvements are needed: output [ACTION] followed by clear, specific,\n"
-        "   line-by-line instructions that Claude Code can execute directly — include exact file\n"
-        "   names, function names, and what to change.\n"
-        "6. If you detect a critical logic error, infinite loop risk, or security issue: output [MANUAL].\n\n"
-        f"CURRENT PLAN.md CONTENTS:\n{plan_contents}\n\n"
-        "OUTPUT FORMAT — your response MUST start with exactly one of these tags on its own line:\n"
-        "[PASS]   — all plan goals met, code is correct\n"
-        "[ACTION] — changes needed (follow with detailed instructions for Claude Code)\n"
-        "[MANUAL] — critical issue requiring human review\n"
+        "1. Check whether the PLAN.md goals are correctly implemented in the code.\n"
+        "2. Look for bugs, incomplete logic, or edge cases.\n"
+        "3. If all goals are met: output [PASS].\n"
+        "4. If changes are needed: output [ACTION] with specific file names, function names,\n"
+        "   and line-by-line instructions that Claude Code can execute directly.\n"
+        "5. If there is a critical error or security issue: output [MANUAL].\n\n"
+        f"CURRENT PLAN.md:\n{plan_contents}\n\n"
+        "Start your response with exactly one tag on its own line:\n"
+        "[PASS] / [ACTION] / [MANUAL]\n"
     )
 
-    message_parts.insert(0, prompt)
-    message_parts.append(codebase_text)
+    # 4. Call Gemini with retry on rate limits
+    for attempt in range(1, MAX_RETRIES + 1):
+        try:
+            response = client.models.generate_content(
+                model=MODEL_ID,
+                contents=[prompt, uploaded_file]
+            )
+            feedback = response.text
+            feedback_upper = feedback.upper()
 
-    # 3. EXECUTE — hard fail on any API error (no false passes)
-    try:
-        response = client.models.generate_content(
-            model=MODEL_ID,
-            contents=message_parts
-        )
-        feedback = response.text
+            # Clean up uploaded file
+            try:
+                client.files.delete(name=uploaded_file.name)
+            except:
+                pass
+            os.remove(CODEBASE_TXT)
 
-        feedback_upper = feedback.upper()
+            if "[MANUAL]" in feedback_upper:
+                with open("AI_FEEDBACK.md", "w", encoding='utf-8') as f:
+                    f.write(f"# MANUAL REVIEW REQUIRED\n\n{feedback}")
+                print("--- SENTINEL: [MANUAL] — Manual intervention required. ---")
+                sys.exit(1)
 
-        if "[MANUAL]" in feedback_upper:
+            if "[ACTION]" in feedback_upper:
+                with open("AI_FEEDBACK.md", "w", encoding='utf-8') as f:
+                    f.write(f"# Sentinel Audit: [ACTION] Required\n\n{feedback}")
+                print("--- SENTINEL: [ACTION] — Handing off to Claude Code. ---")
+                sys.exit(2)
+
+            if "[PASS]" in feedback_upper:
+                with open("AI_FEEDBACK.md", "w", encoding='utf-8') as f:
+                    f.write("# System Verified\n\nGemini Architect confirmed all plan goals met.")
+                print("--- SENTINEL: [PASS] — Architect approved. ---")
+                sys.exit(0)
+
+            # No recognized tag
             with open("AI_FEEDBACK.md", "w", encoding='utf-8') as f:
-                f.write(f"# MANUAL REVIEW REQUIRED\n\n{feedback}")
-            print("--- SENTINEL: Manual Intervention Triggered. Commit blocked. ---")
+                f.write(f"# Ambiguous Response\n\n{feedback}")
+            print("--- SENTINEL: Ambiguous response. Commit blocked. ---")
             sys.exit(1)
 
-        if "[ACTION]" in feedback_upper:
-            with open("AI_FEEDBACK.md", "w", encoding='utf-8') as f:
-                f.write(f"# Sentinel Audit: [ACTION] Required\n\n{feedback}")
-            print("--- SENTINEL: [ACTION] detected. Handing off to Claude Code. ---")
-            sys.exit(2)  # Exit code 2 = ACTION signal to the hook
+        except Exception as e:
+            err = str(e)
+            retry_match = re.search(r'retry[^\d]*(\d+)', err, re.IGNORECASE)
+            suggested_wait = int(retry_match.group(1)) if retry_match else 30
 
-        if "[PASS]" in feedback_upper:
-            with open("AI_FEEDBACK.md", "w", encoding='utf-8') as f:
-                f.write("# System Verified\n\nUX Persistence confirmed by Gemini Architect.")
-            print("--- SENTINEL: System at Equilibrium. [PASS] ---")
-            sys.exit(0)
+            if '429' in err and attempt < MAX_RETRIES:
+                wait = min(suggested_wait + 5, RETRY_CAP)
+                print(f"--- SENTINEL: Rate limited (attempt {attempt}/{MAX_RETRIES}). Retrying in {wait}s... ---")
+                time.sleep(wait)
+                continue
 
-        # No recognized tag — treat as ambiguous, block commit
-        with open("AI_FEEDBACK.md", "w", encoding='utf-8') as f:
-            f.write(f"# Sentinel Audit: Ambiguous Response\n\n{feedback}")
-        print("--- SENTINEL: Ambiguous response from Architect. Commit blocked. ---")
-        sys.exit(1)
-
-    except Exception as e:
-        print(f"\n--- SENTINEL ERROR: {str(e)} ---")
-        print("--- SENTINEL: API unavailable. Commit blocked to prevent false pass. ---")
-        sys.exit(1)
+            print(f"\n--- SENTINEL ERROR: {err} ---")
+            print("--- SENTINEL: API unavailable. Skipping review this commit. ---")
+            # Clean up on error too
+            try:
+                client.files.delete(name=uploaded_file.name)
+            except:
+                pass
+            if os.path.exists(CODEBASE_TXT):
+                os.remove(CODEBASE_TXT)
+            sys.exit(1)
 
 if __name__ == "__main__":
     run_analysis()
