@@ -1,14 +1,11 @@
-import warnings
-warnings.filterwarnings("ignore", category=FutureWarning)
 import os
 import sys
+import warnings
 import google.generativeai as genai
 
-# 1. Setup - Make sure this key matches your Google AI Studio exactly
-genai.configure(api_key="AIzaSyBJFXJoe8OdSsiSD-odRvAQksZikzTukfQ")
-
-# Using the 1.5 Flash model - it's fast and reliable for this
-model = genai.GenerativeModel('gemini-2.5-flash')
+warnings.filterwarnings("ignore")
+genai.configure(api_key="AlzaSyCS_wq3-_O4tyP5L_mNkhmA4Nbh9_lc6kA")
+model = genai.GenerativeModel('gemini-1.5-flash-latest')
 
 IGNORE = {'.git', 'node_modules', '__pycache__', 'dist', 'AI_FEEDBACK.md', 'sentinel.py', '.env'}
 
@@ -24,29 +21,40 @@ def run_analysis():
             except: continue
 
     prompt = (
-        "ACT AS: Senior Architect. REVIEW: The attached codebase vs PLAN.md.\n\n"
-        "OUTPUT REQUIREMENTS:\n"
-        "1. [PASS]: If the code is bug-free and matches the plan.\n"
-        "2. [BLOCK]: If there is a CRITICAL bug or it deviates from the plan.\n"
-        "3. Provide a 'Claude-Ready' technical plan for the next feature.\n"
+        "ACT AS: Senior Full-Stack Lead Architect.\n\n"
+        "GOAL: Ensure the codebase matches PLAN.md with MINIMAL human intervention.\n\n"
+        "ANALYSIS PIPELINE:\n"
+        "1. VERIFICATION: Does the current code already satisfy the goals in PLAN.md? If yes, output [PASS].\n"
+        "2. AUTONOMOUS PLANNING: If work is needed, can Claude do it using mocks, placeholders, or standard logic? If yes, output [ACTION] + steps.\n"
+        "3. MANUAL ESCALATION: Only if a task requires a secret key, manual console toggle, or physical hardware access, output [MANUAL] + 'Reason'.\n\n"
+        "PREFERENCE: Choose [ACTION] over [MANUAL] whenever a technical workaround exists."
     )
 
     try:
         response = model.generate_content([prompt, codebase])
         feedback = response.text
         
-        with open("AI_FEEDBACK.md", "w", encoding='utf-8') as f:
-            f.write(f"# Sentinel Commit Audit\n\n{feedback}")
+        # --- CASE 1: VERIFIED DONE ---
+        if "[PASS]" in feedback.upper():
+            with open("AI_FEEDBACK.md", "w", encoding='utf-8') as f:
+                f.write("System Verified: All tasks complete.")
+            print("--- SENTINEL: System at Equilibrium. Loop Terminated. ---")
+            sys.exit(0)
 
-        if "[BLOCK]" in feedback.upper():
-            print("--- SENTINEL: Issues found. Commit REJECTED. Check AI_FEEDBACK.md ---")
+        # --- CASE 2: MANUAL INTERVENTION (THE BRAKE) ---
+        if "[MANUAL]" in feedback.upper():
+            print("--- SENTINEL: Manual Intervention Required. ---")
+            # We don't update AI_FEEDBACK here so Claude doesn't try to guess
             sys.exit(1) 
-        
-        print("--- SENTINEL: Analysis passed. Commit ACCEPTED. ---")
-        sys.exit(0)
+
+        # --- CASE 3: ACTION REQUIRED (CLAUDE TAKES OVER) ---
+        with open("AI_FEEDBACK.md", "w", encoding='utf-8') as f:
+            f.write(f"# Sentinel Audit: Action Required\n\n{feedback}")
+
+        print("--- SENTINEL: New Plan Generated. Sending to Claude... ---")
+        sys.exit(0) 
 
     except Exception as e:
-        # Removed the emoji here to prevent Windows crashing
         print(f"SENTINEL Error: {str(e)}")
         sys.exit(0)
 
