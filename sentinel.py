@@ -50,23 +50,26 @@ def run_analysis():
     plan_contents = read_file_safe("PLAN.md") or "(PLAN.md not found)"
 
     # 2. Only the files that changed in the last commit
+    all_changed = get_changed_files()
     changed_files = [
-        f for f in get_changed_files()
+        f for f in all_changed
         if not any(ign in f for ign in IGNORE)
         and f.endswith(('.js', '.py', '.html', '.css', '.json', '.md'))
     ]
 
-    if not changed_files:
-        print("--- SENTINEL: No relevant changed files detected. Skipping review. ---")
+    # Skip if nothing changed, or if only PLAN.md changed (no code to review yet)
+    code_files = [f for f in changed_files if not f.endswith('PLAN.md')]
+    if not code_files:
+        print("--- SENTINEL: Only plan/config files changed — no code to review. Skipping. ---")
         sys.exit(0)
 
-    print(f"--- SENTINEL: Reviewing {len(changed_files)} changed file(s): {changed_files} ---")
+    print(f"--- SENTINEL: Reviewing {len(code_files)} code file(s): {code_files} ---")
 
     # 3. Build a compact payload — PLAN.md + only changed file contents
     payload = f"PLAN.md:\n{plan_contents}\n\n{'='*60}\nCHANGED FILES:\n"
     total_chars = len(payload)
 
-    for file_path in changed_files:
+    for file_path in code_files:
         content = read_file_safe(file_path)
         if content is None:
             continue
