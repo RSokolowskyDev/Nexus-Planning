@@ -319,7 +319,7 @@ function renderMobileDayOverlay() {
 
                 const isSelected = state.selectedItemIds.includes(item.id);
                 eventsHTML.push(`<div class="mdo-event color-${item.color} ${isSelected ? 'selected' : ''}"
-                    style="top:${topPx}px; height:${heightPx}px; left: 62px; right: 8px;"
+                    style="top:${topPx}px; height:${heightPx}px; left: 62px; right: 8px; touch-action: none;"
                     data-id="${item.id}" data-dayoff="${off}">
                     <div class="resize-handle top"></div>
                     <div class="mdo-event-title">${item.title}${item.repeat !== 'none' ? ' 🔄' : ''}</div>
@@ -1161,7 +1161,7 @@ function handleMove(e) {
     } else if (isMdoDocResizing) {
         const coords2 = getCoords(e);
         const deltaY = mdoDocStartY - coords2.y;
-        let newH = Math.min(mdoDocStartHeight + deltaY, window.innerHeight * 0.7);
+        let newH = Math.min(mdoDocStartHeight + deltaY, window.innerHeight * 0.9);
         if (newH >= 60 && !mdoUpdateRequested) {
             mdoUpdateRequested = true;
             const targetH = newH;

@@ -86,11 +86,13 @@ body::before {
     filter: brightness(1.2);
     z-index: 1000;
     transition: transform 0.15s var(--transition-smooth), box-shadow 0.15s;
+    will-change: transform;
 }
 
 .mdo-event.snapping {
     transition: top 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275),
                 height 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    will-change: transform;
 }
 
 #app-wrapper {
