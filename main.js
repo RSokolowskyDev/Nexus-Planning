@@ -19,6 +19,10 @@ let mdoResizingContext = null;
 let lastMdoInteractionMoved = false;
 let mdoHoldTimer = null;
 let mdoHoldStartY = 0;
+let isMdoDocResizing = false;
+let mdoDocStartY = 0;
+let mdoDocStartHeight = 0;
+let mdoUpdateRequested = false;
 
 let pinchContext = null;
 
@@ -352,6 +356,14 @@ function renderMobileDayOverlay() {
                     currentDur = template.durationH ?? settings.defaultEventDurationHours;
                 }
 
+                if (!item.dailyTimes) item.dailyTimes = {};
+                if (!item.dailyTimes[dayOff]) {
+                    const template = item.dailyTimes[item.startDayOffset] || {};
+                    item.dailyTimes[dayOff] = {
+                        startHour: template.startHour || currentStart,
+                        durationH: template.durationH || currentDur
+                    };
+                }
                 mdoResizingContext = {
                     item, edge: handle.classList.contains('top') ? 'top' : 'bottom',
                     dayOff, startMouseY: coords.y,
@@ -373,10 +385,12 @@ function renderMobileDayOverlay() {
 
                     mdoDraggingContext = {
                         item, dayOff, startMouseY: coords.y,
-                        initialStartHour: currentStart
+                        initialStartHour: currentStart,
+                        currentDy: 0
                     };
                     selectItem(item.id);
                     renderMobileDayOverlay(); // Visual feedback
+                    el.classList.add('holding');
                     el.style.opacity = '0.7';
                     el.style.zIndex = '100';
                 }, 150);
@@ -1118,28 +1132,26 @@ function handleMove(e) {
             clearTimeout(mdoHoldTimer);
             mdoHoldTimer = null;
         }
-    } else if (mdoDraggingContext) {
-        const { item, dayOff, startMouseY, initialStartHour } = mdoDraggingContext;
-        const dy = coords.y - startMouseY;
-        const hourDelta = dy / 60; // 60px = 1 hour in MDO
-        const snapHours = settings.snapMinutes / 60;
-        let newStart = Math.round((initialStartHour + hourDelta) / snapHours) * snapHours;
-
-        if (newStart < settings.dayStartHour) newStart = settings.dayStartHour;
-
-        // Correctly detect duration from instance or template
-        let currentDur = item.dailyTimes?.[dayOff]?.durationH;
-        if (currentDur === undefined) {
-            currentDur = item.dailyTimes?.[item.startDayOffset]?.durationH ?? settings.defaultEventDurationHours;
+    } else if (isMdoDocResizing) {
+        const coords2 = getCoords(e);
+        const deltaY = mdoDocStartY - coords2.y;
+        let newH = mdoDocStartHeight + deltaY;
+        const panel = document.getElementById('mdo-doc-panel');
+        newH = Math.min(newH, window.innerHeight * 0.9);
+        if (newH >= 60) {
+            panel.style.transition = 'none';
+            panel.style.height = `${newH}px`;
         }
-
-        if (newStart + currentDur > settings.dayEndHour) newStart = settings.dayEndHour - currentDur;
-
-        if (!item.dailyTimes) item.dailyTimes = {};
-        if (!item.dailyTimes[dayOff] || item.dailyTimes[dayOff].startHour !== newStart) {
-            item.dailyTimes[dayOff] = { startHour: newStart, durationH: currentDur };
-            lastMdoInteractionMoved = true;
-            renderMobileDayOverlay();
+        if (e.type === 'touchmove') e.preventDefault();
+    } else if (mdoDraggingContext) {
+        const dy = coords.y - mdoDraggingContext.startMouseY;
+        mdoDraggingContext.currentDy = dy;
+        if (!mdoUpdateRequested) {
+            mdoUpdateRequested = true;
+            requestAnimationFrame(() => {
+                updateMdoDragVisuals();
+                mdoUpdateRequested = false;
+            });
         }
         if (e.type === 'touchmove') e.preventDefault();
     } else if (mdoResizingContext) {

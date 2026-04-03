@@ -61,6 +61,38 @@ html {
     -webkit-font-smoothing: antialiased;
 }
 
+body::before {
+    content: "";
+    position: fixed;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background:
+        radial-gradient(white, rgba(255,255,255,.2) 2px, transparent 40px),
+        radial-gradient(white, rgba(255,255,255,.15) 1px, transparent 30px),
+        radial-gradient(white, rgba(255,255,255,.1) 2px, transparent 40px),
+        radial-gradient(circle at center, #1B2735 0%, #090A0F 100%);
+    background-size: 550px 550px, 350px 350px, 250px 250px, 100% 100%;
+    background-position: 0 0, 40px 60px, 130px 270px, 0 0;
+    z-index: -1;
+}
+
+@keyframes star-twinkle {
+    0%, 100% { opacity: 0.8; }
+    50% { opacity: 1; }
+}
+
+.mdo-event.holding {
+    transform: scale(1.03);
+    box-shadow: 0 0 20px var(--accent-primary);
+    filter: brightness(1.2);
+    z-index: 1000;
+    transition: transform 0.15s var(--transition-smooth), box-shadow 0.15s;
+}
+
+.mdo-event.snapping {
+    transition: top 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275),
+                height 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
 #app-wrapper {
     display: flex;
     flex-direction: column;
@@ -1275,6 +1307,7 @@ body.zoom-day .cell-hour-label {
     z-index: 200;
     box-shadow: 0 -8px 32px rgba(0,0,0,0.4);
     animation: mdo-panel-slide-up 0.25s cubic-bezier(0.1, 0.9, 0.2, 1);
+    transition: transform 0.25s cubic-bezier(0.1, 0.9, 0.2, 1);
 }
 
 @keyframes mdo-panel-slide-up {
