@@ -19,4 +19,4 @@ When implementing touch drag interactions on mobile web, best practices include:
 - Call e.preventDefault() in touchmove handlers (requires passive: false)
 - Use requestAnimationFrame to batch DOM writes and avoid layout thrashing
 - Track pointerId or touch identifier to handle multi-touch correctly
-- Apply will-change: transform to elements being animated for GPU compositing
+- Apply will-change: transform to elements being animated for GPU compositing.
