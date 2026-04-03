@@ -57,6 +57,50 @@ def build_payload(files):
         total_chars += len(chunk)
     return payload, total_chars
 
+def call_gemini(prompt):
+    for attempt in range(1, MAX_RETRIES + 1):
+        try:
+            response = client.models.generate_content(model=MODEL_ID, contents=prompt)
+            return response.text
+        except Exception as e:
+            err = str(e)
+            retry_match = re.search(r'retry[^\d]*(\d+)', err, re.IGNORECASE)
+            suggested_wait = int(retry_match.group(1)) if retry_match else 30
+            if '429' in err and attempt < MAX_RETRIES:
+                wait = min(suggested_wait + 5, RETRY_CAP)
+                print(f"--- SENTINEL: Rate limited (attempt {attempt}/{MAX_RETRIES}). Retrying in {wait}s... ---")
+                time.sleep(wait)
+                continue
+            print(f"\n--- SENTINEL ERROR: {err} ---")
+            print("--- SENTINEL: API unavailable. Skipping review this commit. ---")
+            sys.exit(1)
+
+def handle_response(feedback):
+    feedback_upper = feedback.upper()
+
+    if "[MANUAL]" in feedback_upper:
+        with open("AI_FEEDBACK.md", "w", encoding='utf-8') as f:
+            f.write(f"# MANUAL REVIEW REQUIRED\n\n{feedback}")
+        print("--- SENTINEL: [MANUAL] — Manual intervention required. ---")
+        sys.exit(1)
+
+    if "[ACTION]" in feedback_upper:
+        with open("AI_FEEDBACK.md", "w", encoding='utf-8') as f:
+            f.write(f"# Sentinel: [ACTION] Required\n\n{feedback}")
+        print("--- SENTINEL: [ACTION] — Handing off to Claude Code. ---")
+        sys.exit(2)
+
+    if "[PASS]" in feedback_upper:
+        with open("AI_FEEDBACK.md", "w", encoding='utf-8') as f:
+            f.write("# System Verified\n\nGemini Architect confirmed all plan goals met.")
+        print("--- SENTINEL: [PASS] — Architect approved. ---")
+        sys.exit(0)
+
+    with open("AI_FEEDBACK.md", "w", encoding='utf-8') as f:
+        f.write(f"# Ambiguous Response\n\n{feedback}")
+    print("--- SENTINEL: Ambiguous response. Check AI_FEEDBACK.md. ---")
+    sys.exit(1)
+
 def run_analysis():
     print(f"--- SENTINEL: Initializing Architect ({MODEL_ID})... ---")
 
@@ -71,7 +115,7 @@ def run_analysis():
     plan_changed = any(f.endswith('PLAN.md') for f in all_changed)
 
     # --- MODE A: PLAN.md changed, no code changed ---
-    # Gemini reads existing core files and writes implementation instructions for Claude
+    # Gemini reads existing code and writes precise, structured instructions for Claude
     if plan_changed and not code_files:
         print("--- SENTINEL: PLAN.md updated — generating implementation instructions for Claude... ---")
         payload, total_chars = build_payload(CONTEXT_FILES)
@@ -79,92 +123,53 @@ def run_analysis():
         print(f"--- SENTINEL: Payload ~{tokens_est:,} tokens ---")
 
         prompt = (
-            "ACT AS: Senior Lead Software Architect. Your job is to write precise implementation\n"
-            "instructions for Claude Code, who will implement them and commit the result.\n\n"
-            "Read the PLAN.md goals and the existing codebase below. Write specific, actionable\n"
-            "instructions so Claude knows exactly what to add, change, or remove in which file.\n"
-            "Include exact function names, line references where helpful, and code snippets.\n\n"
+            "ACT AS: Senior Lead Software Architect. Write precise implementation instructions\n"
+            "for Claude Code, who will implement them and commit the result.\n\n"
+            "RULES FOR YOUR RESPONSE:\n"
+            "1. Start with [ACTION] on its own line.\n"
+            "2. For each unchecked [ ] task in PLAN.md, write a numbered section.\n"
+            "3. Each section must specify: exact FILE, exact FUNCTION or line area, and the\n"
+            "   EXACT CODE to add/change — use code blocks. Be specific enough that Claude\n"
+            "   can implement without guessing.\n"
+            "4. End with: 'After implementing all changes, update PLAN.md to mark each completed\n"
+            "   task as [x] and commit everything together.'\n"
+            "5. If all tasks are already implemented, start with [PASS] instead.\n\n"
             f"PLAN.md:\n{plan_contents}\n\n"
-            "{'='*60}\nEXISTING CODE (for context):\n"
-            + payload +
-            "\n\nYour response MUST start with [ACTION] on its own line, followed by your instructions.\n"
-            "If the plan is already fully implemented, start with [PASS].\n"
-            "If there is a critical issue, start with [MANUAL].\n"
+            f"EXISTING CODE:\n{payload}"
         )
 
     # --- MODE B: Code files changed ---
-    # Gemini verifies the implementation matches the plan
+    # Gemini verifies the implementation matches the remaining unchecked plan tasks
     elif code_files:
         print(f"--- SENTINEL: Verifying {len(code_files)} changed file(s): {code_files} ---")
         payload, total_chars = build_payload(code_files)
         tokens_est = (len(plan_contents) + total_chars) // 4
         print(f"--- SENTINEL: Payload ~{tokens_est:,} tokens ---")
 
+        # Only check unchecked tasks
+        unchecked = [l for l in plan_contents.splitlines() if l.strip().startswith('[ ]')]
+        remaining = '\n'.join(unchecked) if unchecked else '(all tasks marked complete)'
+
         prompt = (
-            "ACT AS: Senior Lead Software Architect verifying a code commit.\n"
-            "Your partner Claude Code implemented the changes — verify they correctly satisfy the plan.\n\n"
-            "Check for bugs, missing logic, edge cases, or anything that doesn't match the plan goals.\n\n"
-            f"PLAN.md:\n{plan_contents}\n\n"
-            "{'='*60}\nCHANGED FILES:\n"
-            + payload +
-            "\n\nRespond with exactly one of these on the first line:\n"
-            "[PASS]   — implementation correct, plan goals fully met\n"
-            "[ACTION] — issues found; list exact file, function, and what to fix\n"
-            "[MANUAL] — critical error or security issue needing human review\n"
+            "ACT AS: Senior Lead Software Architect verifying a code commit.\n\n"
+            "Check ONLY the unchecked tasks below against the changed files.\n"
+            "Ignore anything already marked [x] — do not re-review completed work.\n\n"
+            f"UNCHECKED TASKS:\n{remaining}\n\n"
+            f"CHANGED FILES:\n{payload}\n\n"
+            "RULES FOR YOUR RESPONSE:\n"
+            "1. If all unchecked tasks are correctly implemented: respond [PASS].\n"
+            "2. If any unchecked task is missing or buggy: respond [ACTION] followed by\n"
+            "   specific file + function + exact code fix for ONLY what is wrong.\n"
+            "   Do NOT repeat instructions for things that are already correct.\n"
+            "3. If critical error: respond [MANUAL].\n"
         )
 
-    # --- Nothing relevant changed ---
     else:
         print("--- SENTINEL: No relevant changes detected. Skipping. ---")
         sys.exit(0)
 
-    # --- CALL GEMINI with retry ---
-    for attempt in range(1, MAX_RETRIES + 1):
-        try:
-            response = client.models.generate_content(
-                model=MODEL_ID,
-                contents=prompt
-            )
-            feedback = response.text
-            feedback_upper = feedback.upper()
-
-            if "[MANUAL]" in feedback_upper:
-                with open("AI_FEEDBACK.md", "w", encoding='utf-8') as f:
-                    f.write(f"# MANUAL REVIEW REQUIRED\n\n{feedback}")
-                print("--- SENTINEL: [MANUAL] — Manual intervention required. ---")
-                sys.exit(1)
-
-            if "[ACTION]" in feedback_upper:
-                with open("AI_FEEDBACK.md", "w", encoding='utf-8') as f:
-                    f.write(f"# Sentinel: [ACTION] Required\n\n{feedback}")
-                print("--- SENTINEL: [ACTION] — Handing off to Claude Code. ---")
-                sys.exit(2)
-
-            if "[PASS]" in feedback_upper:
-                with open("AI_FEEDBACK.md", "w", encoding='utf-8') as f:
-                    f.write("# System Verified\n\nGemini Architect confirmed all plan goals met.")
-                print("--- SENTINEL: [PASS] — Architect approved. ---")
-                sys.exit(0)
-
-            with open("AI_FEEDBACK.md", "w", encoding='utf-8') as f:
-                f.write(f"# Ambiguous Response\n\n{feedback}")
-            print("--- SENTINEL: Ambiguous response. Check AI_FEEDBACK.md. ---")
-            sys.exit(1)
-
-        except Exception as e:
-            err = str(e)
-            retry_match = re.search(r'retry[^\d]*(\d+)', err, re.IGNORECASE)
-            suggested_wait = int(retry_match.group(1)) if retry_match else 30
-
-            if '429' in err and attempt < MAX_RETRIES:
-                wait = min(suggested_wait + 5, RETRY_CAP)
-                print(f"--- SENTINEL: Rate limited (attempt {attempt}/{MAX_RETRIES}). Retrying in {wait}s... ---")
-                time.sleep(wait)
-                continue
-
-            print(f"\n--- SENTINEL ERROR: {err} ---")
-            print("--- SENTINEL: API unavailable. Skipping review this commit. ---")
-            sys.exit(1)
+    feedback = call_gemini(prompt)
+    handle_response(feedback)
 
 if __name__ == "__main__":
     run_analysis()
