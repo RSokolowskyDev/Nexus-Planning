@@ -480,6 +480,31 @@ document.getElementById('mdo-doc-close').addEventListener('click', () => {
     selectItem(null);
 });
 
+// Wire up the doc panel drag handle to enable resizing
+(function setupMdoDocHandle() {
+    const handle = document.getElementById('mdo-doc-handle');
+    if (!handle) return;
+    const startDocResize = (e) => {
+        const coords = getCoords(e);
+        isMdoDocResizing = true;
+        mdoDocStartY = coords.y;
+        mdoDocStartHeight = document.getElementById('mdo-doc-panel').offsetHeight;
+        if (e.type === 'touchstart') e.preventDefault();
+    };
+    handle.addEventListener('touchstart', startDocResize, { passive: false });
+    handle.addEventListener('mousedown', startDocResize);
+})();
+
+function updateMdoDragVisuals() {
+    if (!mdoDraggingContext) return;
+    const el = document.querySelector(
+        `.mdo-event[data-id="${mdoDraggingContext.item.id}"][data-dayoff="${mdoDraggingContext.dayOff}"]`
+    );
+    if (el) {
+        el.style.transform = `translateY(${mdoDraggingContext.currentDy}px) scale(1.03)`;
+    }
+}
+
 // Swipe handling for the mobile day overlay
 (function setupMobileDayOverlayGestures() {
     const overlay = document.getElementById('mobile-day-overlay');
@@ -1135,12 +1160,16 @@ function handleMove(e) {
     } else if (isMdoDocResizing) {
         const coords2 = getCoords(e);
         const deltaY = mdoDocStartY - coords2.y;
-        let newH = mdoDocStartHeight + deltaY;
-        const panel = document.getElementById('mdo-doc-panel');
-        newH = Math.min(newH, window.innerHeight * 0.9);
-        if (newH >= 60) {
-            panel.style.transition = 'none';
-            panel.style.height = `${newH}px`;
+        let newH = Math.min(mdoDocStartHeight + deltaY, window.innerHeight * 0.9);
+        if (newH >= 60 && !mdoUpdateRequested) {
+            mdoUpdateRequested = true;
+            const targetH = newH;
+            requestAnimationFrame(() => {
+                const panel = document.getElementById('mdo-doc-panel');
+                panel.style.transition = 'none';
+                panel.style.height = `${targetH}px`;
+                mdoUpdateRequested = false;
+            });
         }
         if (e.type === 'touchmove') e.preventDefault();
     } else if (mdoDraggingContext) {
@@ -1188,7 +1217,13 @@ function handleMove(e) {
         }
         if (needsRender) {
             lastMdoInteractionMoved = true;
-            renderMobileDayOverlay();
+            if (!mdoUpdateRequested) {
+                mdoUpdateRequested = true;
+                requestAnimationFrame(() => {
+                    renderMobileDayOverlay();
+                    mdoUpdateRequested = false;
+                });
+            }
         }
         if (e.type === 'touchmove') e.preventDefault();
     } else if (isResizingH) {
@@ -1239,11 +1274,56 @@ function finalizeDrags() {
         clearTimeout(mdoHoldTimer);
         mdoHoldTimer = null;
     }
-    if (mdoDraggingContext || mdoResizingContext) {
+    if (mdoDraggingContext) {
+        const ctx = mdoDraggingContext;
         mdoDraggingContext = null;
+        lastMdoInteractionMoved = ctx.currentDy !== 0;
+
+        // Snap to nearest slot on release
+        const hourRowHeight = 60;
+        const snapHours = settings.snapMinutes / 60;
+        const hourDelta = ctx.currentDy / hourRowHeight;
+        let newStart = Math.round((ctx.initialStartHour + hourDelta) / snapHours) * snapHours;
+        newStart = Math.max(settings.dayStartHour, Math.min(settings.dayEndHour - snapHours, newStart));
+
+        if (!ctx.item.dailyTimes) ctx.item.dailyTimes = {};
+        const existing = ctx.item.dailyTimes[ctx.dayOff] || { durationH: settings.defaultEventDurationHours };
+        ctx.item.dailyTimes[ctx.dayOff] = { startHour: newStart, durationH: existing.durationH };
+
+        // Remove holding style and apply snapping transition class before re-render
+        const dragEl = document.querySelector(
+            `.mdo-event[data-id="${ctx.item.id}"][data-dayoff="${ctx.dayOff}"]`
+        );
+        if (dragEl) {
+            dragEl.style.transform = '';
+            dragEl.classList.remove('holding');
+            dragEl.classList.add('snapping');
+        }
+
+        saveData();
+        renderMobileDayOverlay();
+    }
+    if (mdoResizingContext) {
+        const ctx = mdoResizingContext;
         mdoResizingContext = null;
         lastMdoInteractionMoved = false;
+
+        // Apply snapping transition on the resized element before re-render
+        const resizeEl = document.querySelector(
+            `.mdo-event[data-id="${ctx.item.id}"][data-dayoff="${ctx.dayOff}"]`
+        );
+        if (resizeEl) resizeEl.classList.add('snapping');
+
         saveData();
+        renderMobileDayOverlay();
+    }
+    if (isMdoDocResizing) {
+        isMdoDocResizing = false;
+        const panel = document.getElementById('mdo-doc-panel');
+        if (panel && panel.offsetHeight < 120) {
+            panel.style.display = 'none';
+            selectItem(null);
+        }
     }
     if (movingBlockContext) movingBlockContext = null;
     if (creatingBlockContext) {
