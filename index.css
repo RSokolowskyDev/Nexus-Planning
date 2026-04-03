@@ -101,6 +101,7 @@ body::before {
     width: 100vw;
     height: 100vh;
     overflow: hidden;
+    background: var(--glass-bg);
 }
 
 /* UI Top Nav */
@@ -1054,7 +1055,7 @@ body.zoom-day .cell-hour-label {
     position: fixed;
     top: 0; left: 0; right: 0; bottom: 0;
     z-index: 9999;
-    background: var(--bg-base);
+    background: var(--glass-bg);
     display: flex;
     flex-direction: column;
     font-family: var(--font-family);
@@ -1301,7 +1302,7 @@ body.zoom-day .cell-hour-label {
     bottom: 0;
     left: 0;
     right: 0;
-    max-height: 70vh;
+    max-height: 90vh;
     background: var(--bg-grid);
     border-top: 1px solid var(--glass-border);
     border-radius: 16px 16px 0 0;

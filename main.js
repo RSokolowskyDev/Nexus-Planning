@@ -360,8 +360,8 @@ function renderMobileDayOverlay() {
                 if (!item.dailyTimes[dayOff]) {
                     const template = item.dailyTimes[item.startDayOffset] || {};
                     item.dailyTimes[dayOff] = {
-                        startHour: template.startHour || currentStart,
-                        durationH: template.durationH || currentDur
+                        startHour: template.startHour !== undefined ? template.startHour : currentStart,
+                        durationH: template.durationH !== undefined ? template.durationH : currentDur
                     };
                 }
                 mdoResizingContext = {
@@ -1194,18 +1194,19 @@ function handleMove(e) {
         // Update element visuals directly (real-time, no snapping, no state mutation, no re-render)
         if (!mdoUpdateRequested) {
             mdoUpdateRequested = true;
+            const targetDy = dy;
             requestAnimationFrame(() => {
                 const resizeEl = document.querySelector(
                     `.mdo-event[data-id="${item.id}"][data-dayoff="${dayOff}"]`
                 );
                 if (resizeEl) {
                     if (edge === 'bottom') {
-                        const rawDurH = Math.max(settings.snapMinutes / 60, initialDurationH + dy / hourRowHeight);
+                        const rawDurH = Math.max(settings.snapMinutes / 60, initialDurationH + targetDy / hourRowHeight);
                         resizeEl.style.height = `${rawDurH * hourRowHeight}px`;
                     } else { // top
-                        const rawTopPx = (initialStartHour - settings.dayStartHour) * hourRowHeight + dy;
+                        const rawTopPx = (initialStartHour - settings.dayStartHour) * hourRowHeight + targetDy;
                         const cappedTopPx = Math.max(0, rawTopPx);
-                        const rawHeightPx = initialDurationH * hourRowHeight - dy + Math.min(0, rawTopPx);
+                        const rawHeightPx = initialDurationH * hourRowHeight - targetDy + Math.min(0, rawTopPx);
                         resizeEl.style.top = `${cappedTopPx}px`;
                         resizeEl.style.height = `${Math.max((settings.snapMinutes / 60) * hourRowHeight, rawHeightPx)}px`;
                     }
