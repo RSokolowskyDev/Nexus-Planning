@@ -335,10 +335,10 @@ function renderMobileDayOverlay() {
                 eventsHTML.push(`<div class="mdo-event color-${item.color} ${isSelected ? 'selected' : ''}"
                     style="top:${topPx}px; height:${heightPx}px; left: 62px; right: 8px; touch-action: none;"
                     data-id="${item.id}" data-dayoff="${off}">
-                    <div class="resize-handle top"></div>
+                    <div class="resize-handle top" style="touch-action: none;"></div>
                     <div class="mdo-event-title">${item.title}${item.repeat !== 'none' ? ' 🔄' : ''}</div>
                     <div class="mdo-event-time">${sTime} – ${eTime}</div>
-                    <div class="resize-handle bottom">
+                    <div class="resize-handle bottom" style="touch-action: none;">
                         ${isSelected ? '<div class="mdo-selection-handle"></div>' : ''}
                     </div>
                 </div>`);
