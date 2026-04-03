@@ -22,7 +22,7 @@
     - Use the same delta-from-start-position technique used in the main docs pane resize
       (record startY and startHeight at touchstart, compute newH = startHeight + (startY - currentY))
     - The resize should be smooth and not use window.innerHeight as an absolute reference
-    - Add a galaxy background to everything, this should be simple yet modern and attractive, there should be stars, galaxies, etc. The galaxy stays stationary even if everything else moves
+    - Add a galaxy background to everything, this should be simple yet modern and attractive, there should be stars, galaxies, etc. The galaxy stays stationary even if everything else moves.
 
 ## Research Notes for Gemini Architect
 When implementing touch drag interactions on mobile web, best practices include:
