@@ -94,6 +94,20 @@ function formatTime(hFloat) {
     }
 }
 
+function ensureDailyTime(item, dayOff) {
+    if (!item.dailyTimes) item.dailyTimes = {};
+    if (item.dailyTimes[dayOff]) return item.dailyTimes[dayOff];
+
+    const template = item.dailyTimes[item.startDayOffset] || {};
+    const defaultStart = settings.dayStartHour + (parseInt(item.id, 36) % 3) * settings.defaultEventDurationHours;
+
+    item.dailyTimes[dayOff] = {
+        startHour: template.startHour !== undefined ? template.startHour : defaultStart,
+        durationH: template.durationH !== undefined ? template.durationH : settings.defaultEventDurationHours
+    };
+    return item.dailyTimes[dayOff];
+}
+
 function decimalToTimeInput(hFloat) {
     let h = Math.floor(hFloat);
     let m = Math.round((hFloat - h) * 60);
@@ -346,54 +360,30 @@ function renderMobileDayOverlay() {
             lastMdoInteractionMoved = false;
 
             if (handle) {
-                // Determine current duration and start hour (handling recurrence templates)
-                let currentStart = item.dailyTimes?.[dayOff]?.startHour;
-                let currentDur = item.dailyTimes?.[dayOff]?.durationH;
-
-                if (currentStart === undefined) {
-                    const template = item.dailyTimes?.[item.startDayOffset] || {};
-                    currentStart = template.startHour ?? (settings.dayStartHour + (parseInt(item.id, 36) % 3) * settings.defaultEventDurationHours);
-                    currentDur = template.durationH ?? settings.defaultEventDurationHours;
-                }
-
-                if (!item.dailyTimes) item.dailyTimes = {};
-                if (!item.dailyTimes[dayOff]) {
-                    const template = item.dailyTimes[item.startDayOffset] || {};
-                    item.dailyTimes[dayOff] = {
-                        startHour: template.startHour !== undefined ? template.startHour : currentStart,
-                        durationH: template.durationH !== undefined ? template.durationH : currentDur
-                    };
-                }
+                const tBlock = ensureDailyTime(item, dayOff);
                 mdoResizingContext = {
                     item, edge: handle.classList.contains('top') ? 'top' : 'bottom',
                     dayOff, startMouseY: coords.y,
-                    initialStartHour: currentStart,
-                    initialDurationH: currentDur,
+                    initialStartHour: tBlock.startHour,
+                    initialDurationH: tBlock.durationH,
                     currentDy: 0
                 };
                 selectItem(item.id);
-                renderMobileDayOverlay(); // Visual feedback for selection
                 e.stopPropagation();
                 if (e.type === 'touchstart') e.preventDefault();
             } else {
                 mdoHoldStartY = coords.y;
                 mdoHoldTimer = setTimeout(() => {
-                    let currentStart = item.dailyTimes?.[dayOff]?.startHour;
-                    if (currentStart === undefined) {
-                        const template = item.dailyTimes?.[item.startDayOffset] || {};
-                        currentStart = template.startHour ?? (settings.dayStartHour + (parseInt(item.id, 36) % 3) * settings.defaultEventDurationHours);
-                    }
-
+                    const tBlock = ensureDailyTime(item, dayOff);
                     mdoDraggingContext = {
                         item, dayOff, startMouseY: coords.y,
-                        initialStartHour: currentStart,
+                        initialStartHour: tBlock.startHour,
                         currentDy: 0
                     };
                     selectItem(item.id);
-                    renderMobileDayOverlay(); // Visual feedback
                     el.classList.add('holding');
-                    el.style.opacity = '0.7';
-                    el.style.zIndex = '100';
+                    // Add haptic feedback if available
+                    if (window.navigator && window.navigator.vibrate) window.navigator.vibrate(10);
                 }, 150);
             }
         };
@@ -1348,14 +1338,18 @@ function finalizeDrags() {
         isMdoDocResizing = false;
         const panel = document.getElementById('mdo-doc-panel');
         if (panel && panel.offsetHeight < 120) {
-            panel.style.transition = 'transform 0.25s cubic-bezier(0.1, 0.9, 0.2, 1)';
+            panel.style.transition = 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s';
             panel.style.transform = 'translateY(100%)';
+            panel.style.opacity = '0';
             setTimeout(() => {
                 panel.style.display = 'none';
                 panel.style.transform = '';
+                panel.style.opacity = '';
                 panel.style.transition = '';
                 selectItem(null);
-            }, 250);
+            }, 300);
+        } else {
+            panel.style.transition = 'height 0.2s ease-out';
         }
     }
     if (movingBlockContext) movingBlockContext = null;
