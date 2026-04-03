@@ -146,8 +146,8 @@ def run_analysis():
         tokens_est = (len(plan_contents) + total_chars) // 4
         print(f"--- SENTINEL: Payload ~{tokens_est:,} tokens ---")
 
-        # Only check unchecked tasks
-        unchecked = [l for l in plan_contents.splitlines() if l.strip().startswith('[ ]')]
+        # Only check unchecked tasks — match both '[ ]' and '[]' formats
+        unchecked = [l for l in plan_contents.splitlines() if re.match(r'\s*\[\s?\]', l)]
         remaining = '\n'.join(unchecked) if unchecked else '(all tasks marked complete)'
 
         prompt = (

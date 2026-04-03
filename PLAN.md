@@ -1,7 +1,7 @@
 ## Current Goals
 
 
-[]Add a galaxy background to everything, this should be simple yet modern and attractive, there should be stars, galaxies, etc. The galaxy stays stationary even if everything else moves.
+[ ] Add a galaxy background to everything, this should be simple yet modern and attractive, there should be stars, galaxies, etc. The galaxy stays stationary even if everything else moves.
 
 [ ] TASK: When an event is selected in the mobile day view, show a duration-drag affordance
     that aligns with the selection highlight border.
