@@ -2081,3 +2081,36 @@ body.zoom-day .cell-hour-label {
     font-size: 10px;
     opacity: 0.8;
 }
+
+/* Duration Drag Affordance for Selected Events */
+.mdo-selection-handle {
+    position: absolute;
+    bottom: 4px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 32px;
+    height: 6px;
+    background: #fff;
+    border-radius: 4px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.4);
+    z-index: 10;
+    pointer-events: none; /* Let parent .resize-handle catch the touch */
+}
+
+/* "Grip" lines inside the pill handle */
+.mdo-selection-handle::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 14px;
+    height: 1px;
+    background: rgba(0, 0, 0, 0.2);
+    box-shadow: 0 -2px 0 rgba(0, 0, 0, 0.2), 0 2px 0 rgba(0, 0, 0, 0.2);
+}
+
+/* Ensure the bottom handle is deep enough to catch touches even with the pill */
+.mdo-event .resize-handle.bottom {
+    height: 24px;
+}

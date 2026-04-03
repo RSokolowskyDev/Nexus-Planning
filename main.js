@@ -338,7 +338,9 @@ function renderMobileDayOverlay() {
                     <div class="resize-handle top"></div>
                     <div class="mdo-event-title">${item.title}${item.repeat !== 'none' ? ' 🔄' : ''}</div>
                     <div class="mdo-event-time">${sTime} – ${eTime}</div>
-                    <div class="resize-handle bottom"></div>
+                    <div class="resize-handle bottom">
+                        ${isSelected ? '<div class="mdo-selection-handle"></div>' : ''}
+                    </div>
                 </div>`);
             }
         });
@@ -361,8 +363,9 @@ function renderMobileDayOverlay() {
 
             if (handle) {
                 const tBlock = ensureDailyTime(item, dayOff);
+                const isTop = handle.classList.contains('top');
                 mdoResizingContext = {
-                    item, edge: handle.classList.contains('top') ? 'top' : 'bottom',
+                    item, edge: isTop ? 'top' : 'bottom',
                     dayOff, startMouseY: coords.y,
                     initialStartHour: tBlock.startHour,
                     initialDurationH: tBlock.durationH,

@@ -24,7 +24,7 @@
     - The resize should be smooth and not use window.innerHeight as an absolute reference
     - Add a galaxy background to everything, this should be simple yet modern and attractive, there should be stars, galaxies, etc. The galaxy stays stationary even if everything else moves.
 
-[ ] TASK: When an event is selected in the mobile day view, show a duration-drag affordance
+[x] TASK: When an event is selected in the mobile day view, show a duration-drag affordance
     that aligns with the selection highlight border.
     - When selected, render a drag zone at the bottom edge of the event (inside the highlight border)
       showing a visible handle — e.g. a pill/bar with a resize cursor icon or double-arrow symbol
