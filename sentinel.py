@@ -546,7 +546,8 @@ def main():
                     ["git", "commit", "-m", f"sentinel: {short_task}"],
                     check=True
                 )
-                print("Committed. Task complete.\n")
+                subprocess.run(["git", "push"], check=True)
+                print("Committed and pushed. Task complete.\n")
             except subprocess.CalledProcessError as e:
                 print(f"  Git commit failed: {e}\n")
 
