@@ -68,31 +68,84 @@ body::before {
     left: 0;
     width: 100%;
     height: 100%;
-    background-color: #030407;
-    /* Composite background for a deep galaxy feel */
-    background-image:
-        /* Distant Tiny Stars */
-        radial-gradient(1px 1px at 10% 10%, #fff, transparent),
-        radial-gradient(1px 1px at 20% 50%, #fff, transparent),
-        radial-gradient(1px 1px at 50% 20%, #fff, transparent),
-        radial-gradient(1px 1px at 80% 40%, #fff, transparent),
-        radial-gradient(1px 1px at 90% 90%, #fff, transparent),
-        radial-gradient(1px 1px at 40% 70%, #fff, transparent),
-        /* Mid-sized Stars */
-        radial-gradient(1.5px 1.5px at 15% 85%, #fff, transparent),
-        radial-gradient(1.5px 1.5px at 75% 15%, #fff, transparent),
-        /* Galaxy Core Glows (Large nebulae) */
-        radial-gradient(ellipse at 30% 40%, rgba(99, 102, 241, 0.15) 0%, rgba(99, 102, 241, 0.05) 40%, transparent 80%),
-        radial-gradient(ellipse at 70% 60%, rgba(236, 72, 153, 0.12) 0%, rgba(236, 72, 153, 0.03) 40%, transparent 80%),
-        /* Distant Blue Nebula */
-        radial-gradient(circle at 10% 90%, rgba(59, 130, 246, 0.08) 0%, transparent 60%),
-        /* Distant Purple Nebula */
-        radial-gradient(circle at 90% 10%, rgba(139, 92, 246, 0.08) 0%, transparent 60%);
-    /* Sizes match the repeat patterns for stars, nebulae are full screen */
-    background-size: 300px 300px, 350px 350px, 400px 400px, 250px 250px, 280px 280px, 320px 320px, 500px 500px, 450px 450px, 100% 100%, 100% 100%, 100% 100%, 100% 100%;
-    background-repeat: repeat, repeat, repeat, repeat, repeat, repeat, repeat, repeat, no-repeat, no-repeat, no-repeat, no-repeat;
     z-index: -1;
-    opacity: 1;
+    background-color: #020308;
+    background-image:
+        /* ── NEBULA GLOWS (no-repeat, full screen) ── */
+        radial-gradient(ellipse 65% 45% at 28% 38%, rgba(99,102,241,0.22) 0%, rgba(99,102,241,0.06) 45%, transparent 72%),
+        radial-gradient(ellipse 55% 65% at 72% 62%, rgba(236,72,153,0.16) 0%, rgba(236,72,153,0.04) 45%, transparent 72%),
+        radial-gradient(ellipse 40% 35% at 8%  82%, rgba(59,130,246,0.13) 0%, transparent 60%),
+        radial-gradient(ellipse 38% 28% at 92% 12%, rgba(139,92,246,0.13) 0%, transparent 55%),
+        radial-gradient(ellipse 60% 22% at 50% 50%, rgba(16,185,129,0.07) 0%, transparent 65%),
+        /* ── BRIGHT STARS 2–3px (large tile intervals) ── */
+        radial-gradient(2px 2px   at 18% 72%, rgba(255,255,240,0.95), transparent),
+        radial-gradient(2.5px 2.5px at 63% 28%, rgba(255,255,255,1.00), transparent),
+        radial-gradient(3px 3px   at 41% 54%, rgba(200,220,255,0.90), transparent),
+        radial-gradient(2px 2px   at 82% 43%, rgba(255,255,255,0.88), transparent),
+        radial-gradient(2px 2px   at 7%  33%, rgba(255,240,200,0.90), transparent),
+        radial-gradient(2.5px 2.5px at 55% 81%, rgba(255,255,255,0.95), transparent),
+        radial-gradient(2px 2px   at 89% 67%, rgba(220,230,255,0.85), transparent),
+        /* ── MEDIUM STARS 1.5px ── */
+        radial-gradient(1.5px 1.5px at 12% 88%, rgba(255,255,255,0.80), transparent),
+        radial-gradient(1.5px 1.5px at 76% 14%, rgba(255,255,255,0.75), transparent),
+        radial-gradient(1.5px 1.5px at 34% 61%, rgba(200,215,255,0.70), transparent),
+        radial-gradient(1.5px 1.5px at 89% 71%, rgba(255,255,255,0.80), transparent),
+        radial-gradient(1.5px 1.5px at 56% 37%, rgba(255,255,255,0.68), transparent),
+        radial-gradient(1.5px 1.5px at 23% 47%, rgba(255,240,220,0.72), transparent),
+        radial-gradient(1.5px 1.5px at 68% 84%, rgba(255,255,255,0.75), transparent),
+        radial-gradient(1.5px 1.5px at 47% 13%, rgba(200,235,255,0.70), transparent),
+        radial-gradient(1.5px 1.5px at 4%  56%, rgba(255,255,255,0.65), transparent),
+        radial-gradient(1.5px 1.5px at 93% 39%, rgba(255,255,255,0.70), transparent),
+        radial-gradient(1.5px 1.5px at 31% 26%, rgba(255,245,200,0.68), transparent),
+        /* ── SMALL STARS 1px (many positions, varied tints) ── */
+        radial-gradient(1px 1px at 9%  21%, rgba(255,255,255,0.60), transparent),
+        radial-gradient(1px 1px at 92% 54%, rgba(255,255,255,0.55), transparent),
+        radial-gradient(1px 1px at 44% 76%, rgba(255,255,255,0.50), transparent),
+        radial-gradient(1px 1px at 71% 8%,  rgba(255,255,255,0.60), transparent),
+        radial-gradient(1px 1px at 29% 92%, rgba(255,255,255,0.50), transparent),
+        radial-gradient(1px 1px at 58% 63%, rgba(255,255,255,0.55), transparent),
+        radial-gradient(1px 1px at 14% 45%, rgba(255,255,255,0.48), transparent),
+        radial-gradient(1px 1px at 84% 30%, rgba(255,255,255,0.60), transparent),
+        radial-gradient(1px 1px at 38% 16%, rgba(255,255,255,0.52), transparent),
+        radial-gradient(1px 1px at 95% 83%, rgba(255,255,255,0.55), transparent),
+        radial-gradient(1px 1px at 27% 65%, rgba(200,220,255,0.50), transparent),
+        radial-gradient(1px 1px at 61% 94%, rgba(255,255,255,0.48), transparent),
+        radial-gradient(1px 1px at 3%  71%, rgba(255,255,255,0.52), transparent),
+        radial-gradient(1px 1px at 78% 49%, rgba(255,255,255,0.55), transparent),
+        radial-gradient(1px 1px at 51% 34%, rgba(255,255,255,0.48), transparent),
+        radial-gradient(1px 1px at 20% 8%,  rgba(255,240,200,0.58), transparent),
+        radial-gradient(1px 1px at 86% 97%, rgba(255,255,255,0.50), transparent),
+        radial-gradient(1px 1px at 43% 43%, rgba(255,255,255,0.46), transparent),
+        radial-gradient(1px 1px at 67% 75%, rgba(200,215,255,0.50), transparent),
+        radial-gradient(1px 1px at 32% 29%, rgba(255,255,255,0.56), transparent),
+        radial-gradient(1px 1px at 73% 58%, rgba(255,255,255,0.50), transparent),
+        radial-gradient(1px 1px at 16% 73%, rgba(220,230,255,0.48), transparent),
+        radial-gradient(1px 1px at 48% 87%, rgba(255,255,255,0.52), transparent),
+        radial-gradient(1px 1px at 85% 19%, rgba(255,250,220,0.55), transparent);
+    background-size:
+        /* 5 Nebulae */
+        100% 100%, 100% 100%, 100% 100%, 100% 100%, 100% 100%,
+        /* 7 Bright stars */
+        900px 900px, 850px 850px, 1000px 1000px, 750px 750px, 800px 800px, 950px 950px, 700px 700px,
+        /* 12 Medium stars */
+        550px 550px, 520px 520px, 490px 490px, 570px 570px, 480px 480px,
+        530px 530px, 510px 510px, 560px 560px, 500px 500px, 580px 580px,
+        545px 545px, 515px 515px,
+        /* 25 Small stars */
+        320px 320px, 350px 350px, 290px 290px, 340px 340px, 360px 360px,
+        305px 305px, 330px 330px, 380px 380px, 275px 275px, 395px 395px,
+        345px 345px, 265px 265px, 315px 315px, 355px 355px, 325px 325px,
+        285px 285px, 375px 375px, 345px 345px, 295px 295px, 315px 315px,
+        370px 370px, 280px 280px, 335px 335px, 360px 360px, 300px 300px;
+    background-repeat:
+        no-repeat, no-repeat, no-repeat, no-repeat, no-repeat,
+        repeat, repeat, repeat, repeat, repeat, repeat, repeat,
+        repeat, repeat, repeat, repeat, repeat,
+        repeat, repeat, repeat, repeat, repeat, repeat, repeat,
+        repeat, repeat, repeat, repeat, repeat, repeat, repeat,
+        repeat, repeat, repeat, repeat, repeat, repeat, repeat,
+        repeat, repeat, repeat, repeat, repeat, repeat, repeat,
+        repeat, repeat;
 }
 
 /* Add specialized star twinkle animation */
@@ -2096,6 +2149,7 @@ body.zoom-day .cell-hour-label {
 }
 
 /* Duration Drag Affordance for Selected Events */
+/* Base handle style with absolute positioning confirmed */
 .mdo-selection-handle {
     position: absolute;
     bottom: 4px;
@@ -2111,6 +2165,12 @@ body.zoom-day .cell-hour-label {
     display: flex;
     justify-content: center;
     align-items: center;
+}
+
+/* Specific position for top handle pill */
+.mdo-selection-handle.top {
+    top: 4px;
+    bottom: auto;
 }
 
 /* Add double arrow symbol to the pill */
@@ -2131,4 +2191,17 @@ body.zoom-day .cell-hour-label {
     align-items: flex-end;
     justify-content: center;
     bottom: 0;
+}
+
+/* Increase top hit area to match bottom handle */
+.mdo-event .resize-handle.top {
+    height: 30px;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+}
+
+/* Hide default small dash bars when high-vis pills are active */
+.mdo-event.selected .resize-handle::after {
+    display: none;
 }

@@ -332,15 +332,21 @@ function renderMobileDayOverlay() {
                 const eTime = formatTime(tBlock.startHour + tBlock.durationH);
 
                 const isSelected = state.selectedItemIds.includes(item.id);
+                // Only render handles when selected so it doesn't clutter unselected events
+                const handlesHTML = isSelected ? `
+                    <div class="resize-handle top" style="touch-action: none;">
+                        <div class="mdo-selection-handle top"></div>
+                    </div>
+                    <div class="resize-handle bottom" style="touch-action: none;">
+                        <div class="mdo-selection-handle"></div>
+                    </div>` : '';
+
                 eventsHTML.push(`<div class="mdo-event color-${item.color} ${isSelected ? 'selected' : ''}"
                     style="top:${topPx}px; height:${heightPx}px; left: 62px; right: 8px; touch-action: none;"
                     data-id="${item.id}" data-dayoff="${off}">
-                    <div class="resize-handle top" style="touch-action: none;"></div>
+                    ${handlesHTML}
                     <div class="mdo-event-title">${item.title}${item.repeat !== 'none' ? ' 🔄' : ''}</div>
                     <div class="mdo-event-time">${sTime} – ${eTime}</div>
-                    <div class="resize-handle bottom" style="touch-action: none;">
-                        ${isSelected ? '<div class="mdo-selection-handle"></div>' : ''}
-                    </div>
                 </div>`);
             }
         });
@@ -371,7 +377,7 @@ function renderMobileDayOverlay() {
                     initialDurationH: tBlock.durationH,
                     currentDy: 0
                 };
-                selectItem(item.id);
+                if (!state.selectedItemIds.includes(item.id)) selectItem(item.id);
                 e.stopPropagation();
                 if (e.type === 'touchstart') e.preventDefault();
             } else {
@@ -383,7 +389,7 @@ function renderMobileDayOverlay() {
                         initialStartHour: tBlock.startHour,
                         currentDy: 0
                     };
-                    selectItem(item.id);
+                    if (!state.selectedItemIds.includes(item.id)) selectItem(item.id);
                     el.classList.add('holding');
                     // Add haptic feedback if available
                     if (window.navigator && window.navigator.vibrate) window.navigator.vibrate(10);
@@ -1293,13 +1299,13 @@ function finalizeDrags() {
     }
     if (mdoResizingContext) {
         const ctx = mdoResizingContext;
+        const dy = ctx.currentDy || 0;
         mdoResizingContext = null;
-        lastMdoInteractionMoved = false;
+        lastMdoInteractionMoved = Math.abs(dy) > 2;
 
         const { item, edge, dayOff, initialStartHour, initialDurationH } = ctx;
         const hourRowHeight = 60;
         const snapHours = settings.snapMinutes / 60;
-        const dy = ctx.currentDy || 0;
         const hourDelta = dy / hourRowHeight;
 
         if (!item.dailyTimes) item.dailyTimes = {};

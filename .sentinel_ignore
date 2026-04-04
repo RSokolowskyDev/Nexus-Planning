@@ -1,0 +1,16 @@
+.git
+node_modules
+__pycache__
+dist
+.env
+sentinel.py
+CLAUDE.md
+CLAUDE_CONTEXT.md
+AI_FEEDBACK.md
+screenshots
+*.sentinel_lock
+*.sentinel_iterations
+codebase_snapshot.txt
+*.log
+*.map
+.DS_Store
