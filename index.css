@@ -1383,6 +1383,7 @@ body.zoom-day .cell-hour-label {
     bottom: 0;
     left: 0;
     right: 0;
+    height: 300px;
     max-height: 90vh;
     background: var(--bg-grid);
     border-top: 1px solid var(--glass-border);

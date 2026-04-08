@@ -485,7 +485,9 @@ function openMdoDocPanel(itemId) {
 
 // Wire up the doc panel close button (runs once at init)
 document.getElementById('mdo-doc-close').addEventListener('click', () => {
-    document.getElementById('mdo-doc-panel').style.display = 'none';
+    const panel = document.getElementById('mdo-doc-panel');
+    panel.style.display = 'none';
+    panel.style.height = ''; // Reset to default CSS height
     selectItem(null);
 });
 
@@ -1352,6 +1354,7 @@ function finalizeDrags() {
             panel.style.opacity = '0';
             setTimeout(() => {
                 panel.style.display = 'none';
+                panel.style.height = ''; // Reset to default CSS height
                 panel.style.transform = '';
                 panel.style.opacity = '';
                 panel.style.transition = '';
