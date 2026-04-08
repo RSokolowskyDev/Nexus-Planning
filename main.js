@@ -356,6 +356,15 @@ function renderMobileDayOverlay() {
     html += '</div>';
     schedule.innerHTML = html;
 
+    // Deselect when clicking empty space in the schedule background
+    schedule.onclick = (e) => {
+        if (!e.target.closest('.mdo-event') && !e.target.closest('.mdo-selection-handle')) {
+            selectItem(null);
+            const panel = document.getElementById('mdo-doc-panel');
+            if (panel) panel.style.display = 'none';
+        }
+    };
+
     // Add touch and click handlers for events
     schedule.querySelectorAll('.mdo-event').forEach(el => {
         const itemId = el.dataset.id;
@@ -793,6 +802,7 @@ let resizingDailyContext = null;
 let movingBlockContext = null;
 
 function handleStart(e) {
+    lastMdoInteractionMoved = false;
     // Double Tap Detection for Mobile Day View entry
     if (e.type === 'touchstart' && e.touches.length === 1) {
         const now = Date.now();
@@ -1267,7 +1277,6 @@ function finalizeDrags() {
         mdoDraggingContext = null;
         lastMdoInteractionMoved = ctx.currentDy !== 0;
 
-        // Snap to nearest slot on release
         const hourRowHeight = 60;
         const snapHours = settings.snapMinutes / 60;
         const hourDelta = ctx.currentDy / hourRowHeight;
@@ -1278,24 +1287,22 @@ function finalizeDrags() {
         const existing = ctx.item.dailyTimes[ctx.dayOff] || { durationH: settings.defaultEventDurationHours };
         ctx.item.dailyTimes[ctx.dayOff] = { startHour: newStart, durationH: existing.durationH };
 
-        // Animate element from current visual position to snapped position, then re-render
-        const dragEl = document.querySelector(
-            `.mdo-event[data-id="${ctx.item.id}"][data-dayoff="${ctx.dayOff}"]`
-        );
+        const dragEl = document.querySelector(`.mdo-event[data-id="${ctx.item.id}"][data-dayoff="${ctx.dayOff}"]`);
         if (dragEl) {
-            const hourRowHeight = 60;
             const currentVisualTop = (ctx.initialStartHour - settings.dayStartHour) * hourRowHeight + ctx.currentDy;
             const finalTop = (newStart - settings.dayStartHour) * hourRowHeight;
             dragEl.classList.remove('holding');
             dragEl.style.transform = '';
             dragEl.style.top = `${currentVisualTop}px`;
-            dragEl.getBoundingClientRect(); // Force reflow so browser registers start position
+            void dragEl.offsetWidth; // Force reflow
             dragEl.classList.add('snapping');
             dragEl.style.top = `${finalTop}px`;
-        }
 
+            setTimeout(() => renderMobileDayOverlay(), 210);
+        } else {
+            renderMobileDayOverlay();
+        }
         saveData();
-        setTimeout(() => renderMobileDayOverlay(), 220);
     }
     if (mdoResizingContext) {
         const ctx = mdoResizingContext;
@@ -1308,40 +1315,33 @@ function finalizeDrags() {
         const snapHours = settings.snapMinutes / 60;
         const hourDelta = dy / hourRowHeight;
 
-        if (!item.dailyTimes) item.dailyTimes = {};
-        if (!item.dailyTimes[dayOff]) {
-            item.dailyTimes[dayOff] = { startHour: initialStartHour, durationH: initialDurationH };
-        }
-
         let snappedStartH = initialStartHour;
         let snappedDurH = initialDurationH;
         if (edge === 'bottom') {
             snappedDurH = Math.round((initialDurationH + hourDelta) / snapHours) * snapHours;
             if (snappedDurH < snapHours) snappedDurH = snapHours;
             if (initialStartHour + snappedDurH > settings.dayEndHour) snappedDurH = settings.dayEndHour - initialStartHour;
-        } else { // top
+        } else {
             let hourShift = Math.round(hourDelta / snapHours) * snapHours;
             snappedStartH = initialStartHour + hourShift;
             snappedDurH = initialDurationH - hourShift;
             if (snappedDurH < snapHours) { const diff = snapHours - snappedDurH; snappedStartH -= diff; snappedDurH = snapHours; }
             if (snappedStartH < settings.dayStartHour) { const diff = settings.dayStartHour - snappedStartH; snappedStartH = settings.dayStartHour; snappedDurH -= diff; }
         }
-        item.dailyTimes[dayOff].startHour = snappedStartH;
-        item.dailyTimes[dayOff].durationH = snappedDurH;
+        if (!item.dailyTimes) item.dailyTimes = {};
+        item.dailyTimes[dayOff] = { startHour: snappedStartH, durationH: snappedDurH };
 
-        // Animate element to snapped position then re-render
-        const resizeEl = document.querySelector(
-            `.mdo-event[data-id="${item.id}"][data-dayoff="${dayOff}"]`
-        );
+        const resizeEl = document.querySelector(`.mdo-event[data-id="${item.id}"][data-dayoff="${dayOff}"]`);
         if (resizeEl) {
-            resizeEl.getBoundingClientRect(); // Force reflow so browser registers current visual state
+            void resizeEl.offsetWidth;
             resizeEl.classList.add('snapping');
             resizeEl.style.top = `${(snappedStartH - settings.dayStartHour) * hourRowHeight}px`;
             resizeEl.style.height = `${snappedDurH * hourRowHeight}px`;
+            setTimeout(() => renderMobileDayOverlay(), 210);
+        } else {
+            renderMobileDayOverlay();
         }
-
         saveData();
-        setTimeout(() => renderMobileDayOverlay(), 220);
     }
     if (isMdoDocResizing) {
         isMdoDocResizing = false;
