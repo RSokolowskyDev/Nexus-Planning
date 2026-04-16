@@ -119,9 +119,32 @@ export async function loadIdentityData() {
 export function getGoals() { return goals; }
 export function getGoalsByIdentity(identityId) { return goals.filter(g => g.identityId === identityId); }
 
-export function addGoal({ identityId, title, description = '', targetDate = null }) {
+export function addGoal({
+    identityId,
+    title,
+    description = '',
+    targetDate = null,
+    goalType = 'outcome',
+    category = 'teaching',
+    whyStatement = '',
+    tinyStep = '',
+    reflectionPrompt = ''
+}) {
     const id = Math.random().toString(36).substring(2, 9);
-    const goal = { id, identityId, title, description, targetDate, completed: false, createdAt: new Date().toISOString() };
+    const goal = {
+        id,
+        identityId,
+        title,
+        description,
+        targetDate,
+        goalType,
+        category,
+        whyStatement,
+        tinyStep,
+        reflectionPrompt,
+        completed: false,
+        createdAt: new Date().toISOString()
+    };
     goals.push(goal);
     return goal;
 }

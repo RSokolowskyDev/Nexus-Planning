@@ -2099,6 +2099,10 @@ function setupIdentityUI() {
         renderIdentityPane();
     });
 
+    document.getElementById('add-goal-global').addEventListener('click', () => {
+        openGoalModal();
+    });
+
     // Goal modal wiring
     document.getElementById('cancel-goal').addEventListener('click', () => {
         document.getElementById('goal-modal').classList.add('hidden');
@@ -2106,13 +2110,19 @@ function setupIdentityUI() {
 
     document.getElementById('save-goal').addEventListener('click', () => {
         const title = document.getElementById('goal-title').value.trim();
-        if (!title) return;
+        const tinyStep = document.getElementById('goal-tiny-step').value.trim();
+        if (!title || !tinyStep) return;
         const identityId = document.getElementById('goal-identity').value || null;
         identityService.addGoal({
             identityId,
             title,
             description: document.getElementById('goal-description').value.trim(),
-            targetDate: document.getElementById('goal-target-date').value || null
+            targetDate: document.getElementById('goal-target-date').value || null,
+            goalType: document.getElementById('goal-type').value,
+            category: document.getElementById('goal-category').value,
+            whyStatement: document.getElementById('goal-why').value.trim(),
+            tinyStep,
+            reflectionPrompt: document.getElementById('goal-reflection').value.trim()
         });
         identityService.saveIdentityData();
         document.getElementById('goal-modal').classList.add('hidden');
@@ -2291,14 +2301,7 @@ function buildIdentityCard(identity, habits) {
 
     // Add goal button
     card.querySelector('.add-goal-btn').addEventListener('click', () => {
-        const select = document.getElementById('goal-identity');
-        select.innerHTML = identityService.getIdentities()
-            .map(i => `<option value="${i.id}" ${i.id === identity.id ? 'selected' : ''}>${i.name}</option>`)
-            .join('');
-        document.getElementById('goal-title').value = '';
-        document.getElementById('goal-description').value = '';
-        document.getElementById('goal-target-date').value = '';
-        document.getElementById('goal-modal').classList.remove('hidden');
+        openGoalModal(identity.id);
     });
 
     // Add habit button
@@ -2359,6 +2362,13 @@ function buildHabitRowHTML(habit, today) {
 function buildGoalRowHTML(goal) {
     const dateLabel = goal.targetDate ? `<span class="goal-date">by ${goal.targetDate}</span>` : '';
     const descLabel = goal.description ? `<span class="goal-desc">${goal.description}</span>` : '';
+    const tinyStep = goal.tinyStep ? `<span class="goal-step">Next: ${goal.tinyStep}</span>` : '';
+    const whyStatement = goal.whyStatement ? `<span class="goal-why">${goal.whyStatement}</span>` : '';
+    const metaParts = [];
+    if (goal.goalType) metaParts.push(goal.goalType === 'process' ? 'Process' : 'Outcome');
+    if (goal.category) metaParts.push(capitalizeWord(goal.category));
+    const metaLabel = metaParts.length ? `<span class="goal-pill">${metaParts.join(' · ')}</span>` : '';
+    const reflect = goal.reflectionPrompt ? `<span class="goal-reflect">Reflect: ${goal.reflectionPrompt}</span>` : '';
     return `
         <div class="goal-item ${goal.completed ? 'completed' : ''}">
             <button class="goal-check-btn ${goal.completed ? 'checked' : ''}" data-goal="${goal.id}" title="${goal.completed ? 'Mark incomplete' : 'Mark complete'}">
@@ -2366,12 +2376,44 @@ function buildGoalRowHTML(goal) {
             </button>
             <div class="goal-info">
                 <span class="goal-title">${goal.title}</span>
+                ${metaLabel}
                 ${descLabel}
+                ${whyStatement}
+                ${tinyStep}
+                ${reflect}
                 ${dateLabel}
             </div>
             <button class="goal-delete-btn" data-goal="${goal.id}" title="Remove goal">×</button>
         </div>
     `;
+}
+
+function openGoalModal(preselectedIdentityId = null) {
+    const identities = identityService.getIdentities();
+    if (identities.length === 0) {
+        alert('Create an identity first, then add your goal.');
+        return;
+    }
+
+    const select = document.getElementById('goal-identity');
+    select.innerHTML = identities
+        .map(i => `<option value="${i.id}" ${i.id === (preselectedIdentityId || identities[0].id) ? 'selected' : ''}>${i.name}</option>`)
+        .join('');
+
+    document.getElementById('goal-title').value = '';
+    document.getElementById('goal-description').value = '';
+    document.getElementById('goal-target-date').value = '';
+    document.getElementById('goal-type').value = 'outcome';
+    document.getElementById('goal-category').value = 'teaching';
+    document.getElementById('goal-why').value = '';
+    document.getElementById('goal-tiny-step').value = '';
+    document.getElementById('goal-reflection').value = 'How did I do? What did I learn?';
+    document.getElementById('goal-modal').classList.remove('hidden');
+}
+
+function capitalizeWord(str) {
+    if (!str || typeof str !== 'string') return '';
+    return str.charAt(0).toUpperCase() + str.slice(1);
 }
 
 function showVoteFlash(el, color) {
