@@ -2089,6 +2089,30 @@ body.zoom-day .cell-hour-label {
     color: var(--text-muted);
 }
 
+.goal-pill {
+    width: fit-content;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--accent-primary);
+    border: 1px solid rgba(99, 102, 241, 0.35);
+    border-radius: 999px;
+    padding: 2px 8px;
+    margin-top: 1px;
+}
+
+.goal-why,
+.goal-step,
+.goal-reflect {
+    font-size: 11px;
+    color: #cfd6ef;
+    line-height: 1.35;
+}
+
+.goal-step {
+    color: #d7e6ff;
+}
+
 .goal-date {
     font-size: 11px;
     color: var(--accent-primary);
